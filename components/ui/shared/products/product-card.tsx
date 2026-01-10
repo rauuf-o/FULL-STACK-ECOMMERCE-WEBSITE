@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "../../card";
 import { AlertTriangle } from "lucide-react";
 import { Product } from "@/types";
-const ProductCard = ({ product }: { product: any }) => {
+const ProductCard = ({ product }: { product: Product }) => {
   return (
     <div>
       <Card>
