@@ -14,3 +14,8 @@ export const productInsertSchema = z.object({
   banner: z.string().nullable(),
   price: z.coerce.number().min(0, "Price must be a positive number"),
 });
+//Schema fot signing up user
+export const signInSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters long"),
+});
