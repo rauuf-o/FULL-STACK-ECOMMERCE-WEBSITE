@@ -10,20 +10,22 @@ import Link from "next/link";
 import CredintialsSigninForm from "./credentials-signin";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { SearchParams } from "next/dist/server/request/search-params";
+
 export const metadata = {
-  title: "Sign In ",
+  title: "Sign In",
   description: "Sign in to your account",
 };
-const SignInPage = async (props: {
-  searchParams: Promise<{ callbackUrl: string }>;
-}) => {
-  const { callbackUrl } = await props.searchParams;
+
+type Props = {
+  searchParams: { callbackUrl?: string };
+};
+
+export default async function SignInPage({ searchParams }: Props) {
+  const callbackUrl = searchParams?.callbackUrl ?? "/";
 
   const session = await auth();
-  if (session) {
-    redirect(callbackUrl || "/");
-  }
+  if (session) redirect(callbackUrl);
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-full max-w-md">
@@ -46,12 +48,10 @@ const SignInPage = async (props: {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <CredintialsSigninForm />
+            <CredintialsSigninForm callbackUrl={callbackUrl} />
           </CardContent>
         </Card>
       </div>
     </div>
   );
-};
-
-export default SignInPage;
+}
