@@ -1,18 +1,17 @@
-import { error } from "console";
-import { Session } from "inspector/promises";
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./db/prisma";
-import { adapter } from "next/dist/server/web/adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compareSync } from "bcrypt-ts-edge";
 import type { NextAuthConfig } from "next-auth";
-
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import crypto from "crypto";
 export const config = {
   pages: {
-    signIn: "/auth/sign-in",
-    signOut: "/auth/sign-out",
-    error: "/auth/sign-in",
+    signIn: "/sign-in",
+    signOut: "/sign-out",
+    error: "/sign-in",
   },
   session: {
     strategy: "jwt",
@@ -36,7 +35,7 @@ export const config = {
         if (user && user.password) {
           const isMatch = compareSync(
             credentials.password as string,
-            user.password
+            user.password,
           );
 
           if (isMatch) {
@@ -44,6 +43,7 @@ export const config = {
               id: user.id,
               email: user.email,
               name: user.name,
+              role: user.role,
             };
           }
         }
@@ -59,6 +59,8 @@ export const config = {
       if (session.user) {
         // token.sub exists for JWT strategy
         session.user.id = token?.sub ?? user?.id;
+        session.user.role = token?.role;
+        session.user.name = token?.name;
       }
 
       // Only happens when you call `useSession().update(...)`
@@ -69,6 +71,61 @@ export const config = {
       }
 
       return session;
+    },
+    async jwt({ token, user, trigger, session }: any) {
+      // First time jwt callback is run, user object is available
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        if (user.name === "NO_NAME") {
+          token.name = user.email!.split("@")[0];
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { name: token.name },
+          });
+        }
+      }
+      return token;
+    },
+    authorized({ request, auth }: any) {
+      //array of regex patterns of path we want to protect
+      const protectedPaths = [/\/profile/, /\/user\/(.*)/, /\/admin/];
+      //get path name from request URL object
+      const { pathname } = request.nextUrl;
+      // check if user is not authorized
+      if (!auth && protectedPaths.some((path) => pathname.match(path))) {
+        return false;
+      }
+      console.log("---- AUTHORIZED CALLBACK ----");
+
+      console.log("Auth object:", auth);
+
+      const cookie = request.cookies.get("sessionCartId");
+      console.log("Existing sessionCartId cookie:", cookie);
+
+      if (cookie) {
+        console.log("Cookie already exists → allowing request");
+        return true;
+      }
+
+      console.log("Cookie missing → generating new one");
+
+      const sessionCartId = crypto.randomUUID();
+      console.log("Generated sessionCartId:", sessionCartId);
+
+      const res = NextResponse.next();
+
+      res.cookies.set("sessionCartId", sessionCartId, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+
+      console.log("Cookie set on response ✅");
+
+      return res;
     },
   },
 } satisfies NextAuthConfig;

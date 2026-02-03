@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInDefaultValues } from "@/lib/constants";
 import Link from "next/link";
-import { signInUserWithCredentials } from "@/actions/user.action";
-import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 function SignInButton() {
   const { pending } = useFormStatus();
@@ -23,15 +24,34 @@ export default function CredintialsSigninForm({
 }: {
   callbackUrl: string;
 }) {
-  const [data, action] = useActionState(signInUserWithCredentials, {
-    success: false,
-    message: "",
-  });
+  const router = useRouter();
+  const [error, setError] = useState<string>("");
+
+  async function onSubmit(formData: FormData) {
+    setError("");
+
+    const email = String(formData.get("email") ?? "");
+    const password = String(formData.get("password") ?? "");
+
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false, // we handle navigation ourselves
+      callbackUrl,
+    });
+
+    if (!res?.ok) {
+      setError("Invalid email or password");
+      return;
+    }
+
+    // ✅ this updates the UI instantly
+    router.refresh();
+    router.push(callbackUrl);
+  }
 
   return (
-    <form action={action}>
-      <input type="hidden" name="callbackUrl" value={callbackUrl} />
-
+    <form action={onSubmit}>
       <div className="space-y-6">
         <div>
           <Label htmlFor="email" className="mb-4">
@@ -64,8 +84,8 @@ export default function CredintialsSigninForm({
         <SignInButton />
       </div>
 
-      {data && !data.success && (
-        <p className="text-sm text-red-500 mb-2 text-center">{data.message}</p>
+      {error && (
+        <p className="text-sm text-red-500 mb-2 text-center">{error}</p>
       )}
 
       <div className="text-sm text-center text-muted-foreground">

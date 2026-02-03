@@ -1,4 +1,5 @@
-import { z } from "zod";
+import { Currency } from "lucide-react";
+import { nonnegative, refine, z } from "zod";
 //schema for inserting product
 export const productInsertSchema = z.object({
   name: z.string().min(3, "Product name must be at least 3 characters long"),
@@ -14,8 +15,88 @@ export const productInsertSchema = z.object({
   banner: z.string().nullable(),
   price: z.coerce.number().min(0, "Price must be a positive number"),
 });
-//Schema fot signing up user
+//update product schema
+export const updateProductSchema = productInsertSchema.extend({
+  id: z.string().min(1, "Product ID is required"),
+});
+// ✅ Unified schema for the form
+export const productFormSchema = productInsertSchema.extend({
+  id: z.string().optional(),
+});
+
+//Schema for signing in user
 export const signInSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
+});
+//Schema for signing up user
+export const signUpSchema = z
+  .object({
+    name: z.string().min(3, "Name must be at least 3 characters long"),
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters long"),
+    confirmPassword: z
+      .string()
+      .min(6, "Confirm Password must be at least 6 characters long"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+//cart schema
+export const cartItemSchema = z.object({
+  productId: z.string().min(1, "Product ID is required"),
+  name: z.string().min(1, "Product name is required"),
+  quantity: z.coerce
+    .number()
+    .int()
+    .nonnegative("Quantity must be a non-negative integer"),
+  slug: z.string().min(1, "Slug is required"),
+  image: z.string().min(1, "Image is required"),
+  price: z.coerce.number().min(0, "Price must be a non-negative number"),
+});
+export const cartSchema = z.object({
+  items: z.array(cartItemSchema),
+  itemsPrice: z.coerce.number().min(0, "Items price must be non-negative"),
+  totalPrice: z.coerce.number().min(0, "Total price must be non-negative"),
+  shippingPrice: z.coerce
+    .number()
+    .min(0, "Shipping price must be non-negative"),
+  sessionCartId: z.string().min(1, "Session Cart ID is required"),
+  userId: z.string().optional().nullable(),
+});
+
+export const shippingAddressSchema = z.discriminatedUnion("deliveryType", [
+  z.object({
+    deliveryType: z.literal("STOP_DESK"),
+    fullName: z.string().min(3, "Full name must be at least 3 characters long"),
+    phoneNumber: z.string().min(8, "Phone number must be at least 8 digits"),
+    stopDeskId: z.string().min(1, "Please select a stop desk"),
+  }),
+
+  z.object({
+    deliveryType: z.literal("HOME"),
+    fullName: z.string().min(3, "Full name must be at least 3 characters long"),
+    phoneNumber: z.string().min(8, "Phone number must be at least 8 digits"),
+    wilaya: z.string().min(2, "Wilaya is required"),
+    baladiya: z.string().min(2, "Baladiya is required"),
+    address: z.string().min(5, "Address must be at least 5 characters long"),
+  }),
+]);
+//schema for inserting orders
+export const insertOrderSchema = z.object({
+  userId: z.string().nullable(), // ✅ this is the fix
+  shippingAddress: z.any(), // or your ShippingAddress schema
+  itemsPrice: z.number(),
+  shippingPrice: z.number(),
+  totalPrice: z.number(),
+});
+//schema for inserting order item
+export const insertOrderItemSchema = z.object({
+  productId: z.string().min(1, "Product ID is required"),
+  slug: z.string(),
+  image: z.string(),
+  name: z.string(),
+  price: z.coerce.number().min(0, "Items price must be non-negative"),
+  qty: z.coerce.number().min(0, "Items price must be non-negative"),
 });

@@ -15,20 +15,21 @@ datasource db {
 }
 
 model Product {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
-  slug        String   @unique(map: "product_slug_idx")
+  slug        String      @unique(map: "product_slug_idx")
   category    String
   images      String[]
   brand       String
   description String
   stock       Int
-  price       Int      @default(0)
-  rating      Decimal  @default(0.0) @db.Decimal(3, 2)
-  numReviews  Int      @default(0)
-  isFeatured  Boolean  @default(false)
+  price       Int         @default(0)
+  rating      Decimal     @default(0.0) @db.Decimal(3, 2)
+  numReviews  Int         @default(0)
+  isFeatured  Boolean     @default(false)
   banner      String?
-  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  createdAt   DateTime    @default(now()) @db.Timestamp(6)
+  orderItems  OrderItem[]
 }
 
 model User {
@@ -45,6 +46,8 @@ model User {
   updatedAt     DateTime  @updatedAt
   account       Account[]
   session       Session[]
+  cart          Cart[]
+  orders        Order[]
 }
 
 model Account {
@@ -84,4 +87,48 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+model Cart {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String?  @db.Uuid
+  sessionId       String
+  items           Json[]   @default([]) @db.Json
+  itemsPrice      Int      @default(0)
+  totalPrice      Int      @default(0)
+  shippingPrice   Int      @default(0)
+  shippingAddress Json?    @db.Json
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId], map: "cart_user_idx")
+  @@unique([sessionId], map: "cart_session_idx")
+}
+
+model Order {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String?     @db.Uuid
+  shippingAddress Json        @db.Json
+  itemsPrice      Int         @default(0)
+  shippingPrice   Int         @default(0)
+  totalPrice      Int         @default(0)
+  isDelivered     Boolean     @default(false)
+  deliveredAt     DateTime?   @db.Timestamp(6)
+  createdAt       DateTime    @default(now()) @db.Timestamp(6)
+  user            User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems      OrderItem[]
+}
+
+model OrderItem {
+  orderId   String  @db.Uuid
+  productId String  @db.Uuid
+  qty       Int
+  price     Int
+  name      String
+  slug      String
+  image     String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([orderId, productId], map: "orderitems-orderId-productId-pK")
 }
