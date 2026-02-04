@@ -21,10 +21,9 @@ export default function AdminLayout({
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
           {/* ✅ Mobile sidebar trigger */}
           <MobileAdminNav />
-
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/images/logo.svg"
+              src="/images/logo2.png"
               alt="logo"
               width={40}
               height={40}
@@ -40,7 +39,6 @@ export default function AdminLayout({
               </div>
             </div>
           </Link>
-
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden md:block">
               <Input
@@ -49,8 +47,7 @@ export default function AdminLayout({
                 className="w-[220px] rounded-xl lg:w-[320px]"
               />
             </div>
-            <Menu />
-          </div>
+          </div>{" "}
         </div>
       </header>
 

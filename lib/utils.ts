@@ -60,3 +60,4 @@ export function shortenId(id: string) {
   return ` ..${id.substring(id.length - 6)}`;
   console.log(shortenId(id));
 }
+//format date and time

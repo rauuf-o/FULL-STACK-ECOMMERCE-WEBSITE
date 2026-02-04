@@ -28,7 +28,7 @@ const ShippingPage = async () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4">
+    <div className="max-w-3xl mx-auto px-4 space-y-15">
       <CheckoutSteps current={1} />
       <ShippingForm addresse={address} isGuest={!userId} />
     </div>

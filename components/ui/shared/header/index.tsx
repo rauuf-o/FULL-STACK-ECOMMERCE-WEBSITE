@@ -15,28 +15,7 @@ const Toggle = dynamic(() => import("./mood-toggle"), {
 });
 
 const Header = () => {
-  return (
-    <header className="w-full border-b">
-      <div className="wrapper lg:mx-auto flex-between">
-        <div className="flex-start">
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/images/logo.svg"
-              alt="logo"
-              width={60}
-              height={60}
-              priority
-            />
-            <span className="hidden lg:block font-bold text-2xl ml-3">
-              {APP_NAME}
-            </span>
-          </Link>
-        </div>
-
-        <Menu />
-      </div>
-    </header>
-  );
+  return <Menu />;
 };
 
 export default Header;

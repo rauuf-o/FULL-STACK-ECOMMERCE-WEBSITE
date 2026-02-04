@@ -1,24 +1,45 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-const CheckoutSteps = ({ current = 0 }) => {
+const STEPS = ["Panier", "Livraison", "Paiement"];
+
+const CheckoutSteps = ({ current = 0 }: { current?: number }) => {
+  const progress = ((current + 1) / STEPS.length) * 100;
+
   return (
-    <div className="flex-between flex-col md:flex-row space-x-2 space-y-2 mb-10 ">
-      {["Shopping", "Shipping Address", "Place Order"].map((step, index) => (
-        <React.Fragment key={step}>
-          <div
+    <div className="max-w-md mx-auto px-4 pt-4">
+      {/* Top row */}
+      <div className="flex items-end justify-between mb-3">
+        <p className="text-base font-semibold leading-normal">
+          {STEPS[current]}
+        </p>
+        <p className="text-xs font-medium uppercase tracking-wider opacity-60">
+          Étape {current + 1} sur {STEPS.length}
+        </p>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+        <div
+          className="h-full bg-primary transition-all duration-300"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* Desktop labels */}
+      <div className="hidden md:flex justify-between mt-4">
+        {STEPS.map((step, index) => (
+          <span
+            key={step}
             className={cn(
-              "p-2 w-56 rounded-full text-center text-sm text-bold md:text-lg  text-base",
-              index === current ? "bg-secondary" : "",
+              "text-xs font-bold uppercase tracking-widest",
+              index <= current ? "text-foreground" : "text-muted-foreground",
             )}
           >
             {step}
-          </div>
-          {step !== "Place Order" && (
-            <hr className="w-16 border-t border-gray-300 mx-2" />
-          )}
-        </React.Fragment>
-      ))}
+          </span>
+        ))}
+      </div>
     </div>
   );
 };

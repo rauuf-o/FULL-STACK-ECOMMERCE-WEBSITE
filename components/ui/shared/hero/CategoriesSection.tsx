@@ -1,0 +1,125 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Product } from "@/types";
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+export default function CategoriesSection({
+  products,
+}: {
+  products: Product[];
+}) {
+  // 1️⃣ Extract unique categories
+  const categories = Array.from(
+    new Set(products.map((p) => p.category).filter(Boolean)),
+  );
+
+  if (!categories.length) return null;
+
+  // 2️⃣ Featured = first category
+  const featured = categories[0];
+  const rest = categories.slice(1);
+
+  // 3️⃣ Image resolver (latest product per category)
+  const getCategoryImage = (category: string) => {
+    const product = [...products]
+      .filter((p) => p.category === category && p.images?.[0])
+      .reverse()[0];
+
+    return product?.images?.[0] ?? "/images/category-fallback.jpg";
+  };
+
+  return (
+    <>
+      {/* Header */}
+      <section className="px-4 pt-8 pb-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-white text-2xl font-extrabold uppercase tracking-tight">
+            Nos Catégories
+          </h2>
+          <Link
+            href="/categories"
+            className="text-primary text-xs font-bold uppercase border-b border-primary/60 hover:border-primary transition"
+          >
+            Voir tout
+          </Link>
+        </div>
+      </section>
+
+      {/* Featured category */}
+      <section className="px-4 pb-4">
+        <Link
+          href={`/category/${slugify(categories[0])}`}
+          className="relative h-64 rounded-xl overflow-hidden group block"
+        >
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.03]"
+            style={{
+              backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.25) 100%), url("${getCategoryImage(
+                featured,
+              )}")`,
+            }}
+          />
+          <div className="relative h-full flex flex-col justify-center p-6">
+            <h3 className="text-white text-2xl font-black uppercase italic">
+              {featured}
+            </h3>
+
+            <p className="text-primary font-bold text-xs uppercase tracking-widest mt-1">
+              Édition Limitée
+            </p>
+
+            <Button
+              variant="outline"
+              className="
+                mt-5 size-11 rounded-full p-0
+                border-primary/40 text-primary
+                bg-black/25 backdrop-blur
+                hover:bg-primary hover:text-background-dark hover:border-primary
+                transition-all
+              "
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+          </div>
+        </Link>
+      </section>
+
+      {/* All remaining categories */}
+      {rest.length > 0 && (
+        <section className="px-4 pb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {rest.map((category) => (
+              <Link
+                key={category}
+                href={`/category/${slugify(category)}`}
+                className="relative h-56 rounded-xl overflow-hidden group block"
+              >
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.03]"
+                  style={{
+                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.85) 100%), url("${getCategoryImage(
+                      category,
+                    )}")`,
+                  }}
+                />
+                <div className="absolute bottom-0 left-0 p-4">
+                  <h3 className="text-white text-lg font-black uppercase">
+                    {category}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}

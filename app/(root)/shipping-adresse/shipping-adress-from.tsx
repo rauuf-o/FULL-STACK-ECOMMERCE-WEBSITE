@@ -23,6 +23,8 @@ import { ShippingAddress } from "@/types";
 import { updateUserAdress } from "@/actions/user.action";
 import { saveCartShippingAddress } from "@/actions/cart-action";
 
+import { User, Phone, Home, MapPin, Store, CreditCard } from "lucide-react";
+
 type ShippingFormProps = {
   addresse?: ShippingAddress;
   isGuest: boolean;
@@ -37,7 +39,6 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
     if (addresse) {
       return addresse as ShippingFormData;
     }
-
     return {
       deliveryType: "HOME" as const,
       fullName: "",
@@ -59,7 +60,6 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
 
   const onSubmit: SubmitHandler<ShippingFormData> = async (values) => {
     startTransition(async () => {
-      // ✅ Save address for BOTH guest and logged-in users (in cart)
       const cartRes = await saveCartShippingAddress(values);
       if (!cartRes.success) {
         toast.error("Something went wrong", {
@@ -68,11 +68,9 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
         return;
       }
 
-      // ✅ If logged in, also save in user profile (optional but nice UX)
       if (!isGuest) {
         const userRes = await updateUserAdress(values);
         if (!userRes.success) {
-          // not blocking checkout, but you can choose to block if you want
           toast.warning("Saved for this order, but not in your profile");
         }
       }
@@ -82,29 +80,34 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
   };
 
   return (
-    <div className="rounded-2xl border bg-background p-5 shadow-sm">
-      <h1 className="text-lg font-semibold">Shipping Address</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Choose delivery type and fill your information.
+    <div className="rounded-2xl border bg-background p-6 shadow-lg max-w-md mx-auto">
+      <h1 className="text-xl font-bold mb-1 flex items-center gap-2">
+        <Home className="h-6 w-6 text-primary" />
+        Adresse de livraison
+      </h1>
+      <p className="text-sm text-muted-foreground mb-4">
+        Choisissez votre mode de livraison et remplissez vos informations.
       </p>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           {/* Delivery Type */}
           <FormField
             control={form.control}
             name="deliveryType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Delivery Type</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  <Store className="w-4 h-4 text-primary" /> Type de livraison
+                </FormLabel>
                 <FormControl>
                   <select
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    className="h-12 w-full rounded-xl border bg-background px-4 text-sm shadow-sm hover:shadow-md transition"
                     value={field.value}
                     onChange={(e) => field.onChange(e.target.value)}
                   >
-                    <option value="HOME">Home Delivery</option>
-                    <option value="STOP_DESK">Stop Desk</option>
+                    <option value="HOME">Livraison à domicile</option>
+                    <option value="STOP_DESK">Point relais</option>
                   </select>
                 </FormControl>
                 <FormMessage />
@@ -118,9 +121,15 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
             name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Full Name</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" /> Nom complet
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="Your full name" {...field} />
+                  <Input
+                    placeholder="Jean Dupont"
+                    {...field}
+                    className="rounded-xl border shadow-sm hover:shadow-md transition"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -133,9 +142,15 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
             name="phoneNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phone Number</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-primary" /> Téléphone
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="0550..." {...field} />
+                  <Input
+                    placeholder="0550..."
+                    {...field}
+                    className="rounded-xl border shadow-sm hover:shadow-md transition"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -150,9 +165,15 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
                 name="wilaya"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Wilaya</FormLabel>
+                    <FormLabel className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" /> Wilaya
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Alger" {...field} />
+                      <Input
+                        placeholder="Alger"
+                        {...field}
+                        className="rounded-xl border shadow-sm hover:shadow-md transition"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -164,9 +185,15 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
                 name="baladiya"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Baladiya</FormLabel>
+                    <FormLabel className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary" /> Baladiya
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Bab Ezzouar" {...field} />
+                      <Input
+                        placeholder="Bab Ezzouar"
+                        {...field}
+                        className="rounded-xl border shadow-sm hover:shadow-md transition"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -178,9 +205,15 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
                 name="address"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel className="flex items-center gap-2">
+                      <Home className="w-4 h-4 text-primary" /> Adresse
+                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="Street, building..." {...field} />
+                      <Input
+                        placeholder="Rue, immeuble..."
+                        {...field}
+                        className="rounded-xl border shadow-sm hover:shadow-md transition"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -196,14 +229,16 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
               name="stopDeskId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Stop Desk</FormLabel>
+                  <FormLabel className="flex items-center gap-2">
+                    <Store className="w-4 h-4 text-primary" /> Point relais
+                  </FormLabel>
                   <FormControl>
                     <select
-                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                      className="h-12 w-full rounded-xl border bg-background px-4 text-sm shadow-sm hover:shadow-md transition"
                       value={field.value}
                       onChange={(e) => field.onChange(e.target.value)}
                     >
-                      <option value="">Select stop desk</option>
+                      <option value="">Sélectionner un point relais</option>
                       <option value="alger-centre">Alger Centre</option>
                       <option value="oran-centre">Oran Centre</option>
                       <option value="setif-centre">Sétif Centre</option>
@@ -215,8 +250,11 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
             />
           )}
 
-          <Button type="submit" className="w-full rounded-xl">
-            Continue
+          <Button
+            type="submit"
+            className="w-full rounded-xl py-4 text-lg font-bold shadow-md hover:shadow-lg transition-all"
+          >
+            Continuer
           </Button>
         </form>
       </Form>

@@ -24,6 +24,9 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
       const result = await addItemToCart(item);
 
       if (result?.success) {
+        // ✅ UPDATE NAVBAR BADGE INSTANTLY
+        window.dispatchEvent(new Event("cart:updated"));
+
         toast.success("Added to cart", {
           id,
           description: item.name,
@@ -48,6 +51,9 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
       const res = await removeItemFromCart(item.productId);
 
       if (res?.success) {
+        // ✅ UPDATE NAVBAR BADGE INSTANTLY
+        window.dispatchEvent(new Event("cart:updated"));
+
         toast.success("Removed from cart", {
           id,
           description: item.name,
@@ -61,13 +67,11 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
     });
   };
 
-  // ✅ Nice ecommerce stepper UI when item exists
+  // ✅ Stepper UI when item exists
   if (existItem) {
     return (
       <div className="mt-3 w-full rounded-xl border bg-background p-3">
         <div className="flex items-center justify-center gap-3">
-          <div className="flex flex-col"></div>
-
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -111,7 +115,7 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
     );
   }
 
-  // ✅ Nice primary CTA when not in cart
+  // ✅ Primary CTA when not in cart
   return (
     <Button
       className="mt-3 w-full gap-2 rounded-xl"

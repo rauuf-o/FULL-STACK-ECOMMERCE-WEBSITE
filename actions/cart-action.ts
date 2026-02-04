@@ -234,3 +234,18 @@ export async function saveCartShippingAddress(address: ShippingAddress) {
     return { success: false, message: (e as Error).message };
   }
 }
+export async function getCartCount() {
+  const cart = await getCartItems();
+
+  const items = Array.isArray((cart as any)?.items)
+    ? ((cart as any).items as any[])
+    : [];
+
+  // supports qty/quantity; defaults to 1 each
+  const count = items.reduce((sum, item) => {
+    const qty = Number(item?.qty ?? item?.quantity ?? 1);
+    return sum + (Number.isFinite(qty) ? qty : 1);
+  }, 0);
+
+  return count;
+}
