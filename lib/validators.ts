@@ -2,19 +2,17 @@ import { Currency } from "lucide-react";
 import { nonnegative, refine, z } from "zod";
 //schema for inserting product
 export const productInsertSchema = z.object({
-  name: z.string().min(3, "Product name must be at least 3 characters long"),
-  slug: z.string().min(3, "Slug must be at least 3 characters long"),
-  category: z.string().min(3, "Category must be at least 3 characters long"),
-  brand: z.string().min(2, "Brand must be at least 2 characters long"),
-  description: z
-    .string()
-    .min(10, "Description must be at least 10 characters long"),
+  name: z.string().min(3),
+  slug: z.string().min(3),
+  category: z.string().min(3),
+  brand: z.string().min(2),
+  description: z.string().min(10),
   stock: z.coerce.number(),
-  images: z.array(z.string()).min(1, "At least one image is required"),
+  images: z.array(z.string()).min(1),
   isFeatured: z.boolean(),
   banner: z.string().nullable(),
-  price: z.coerce.number().min(0, "Price must be a positive number"),
-  taille: z.array(z.string()).optional(), // <-- JSON array validation
+  price: z.coerce.number().min(0),
+  taille: z.array(z.string()).optional(), // ✅ must stay like this
 });
 
 // Update schema
@@ -109,6 +107,8 @@ export const insertOrderItemSchema = z.object({
   image: z.string(),
   name: z.string(),
   price: z.coerce.number().min(0, "Price must be non-negative"),
-  qty: z.coerce.number().min(0, "Quantity must be non-negative"),
-  taille: z.string().optional(), // ✅ Add this
+  qty: z.coerce.number().min(1, "Quantity must be at least 1"),
+
+  // ✅ single chosen size
+  taille: z.string().optional(),
 });

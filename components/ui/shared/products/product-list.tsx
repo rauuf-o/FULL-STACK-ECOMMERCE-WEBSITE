@@ -3,6 +3,7 @@ import ProductCard from "./product-card";
 import { Product } from "@/types";
 import CategoriesSection from "../hero/CategoriesSection";
 import TrustSection from "../hero/TrustSection";
+import LatestProducts from "../hero/latestproducts";
 const ProductsList = ({
   data,
   title,
@@ -20,20 +21,8 @@ const ProductsList = ({
 
       {/* ✅ NEW: Categories section using same products data */}
       <CategoriesSection products={data} />
+      <LatestProducts limit={6} />
 
-      <h2 className="h2-bold mb-4">{title}</h2>
-
-      {data.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {limitedData.map((product: Product) => (
-            <div key={product.slug}>
-              <ProductCard product={product} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p>No products available.</p>
-      )}
       <TrustSection />
     </div>
   );

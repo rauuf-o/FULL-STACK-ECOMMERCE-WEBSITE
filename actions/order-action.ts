@@ -141,15 +141,6 @@ export async function getOrderById(orderId: string | undefined) {
 }
 
 //get sales data and order summary
-type ShippingAddress = {
-  deliveryType?: "HOME" | "STOP_DESK";
-  fullName?: string;
-  phoneNumber?: string;
-  stopDeskId?: string;
-  wilaya?: string;
-  baladiya?: string;
-  address?: string;
-};
 
 export async function getOrderSummary() {
   // get counts for each resource

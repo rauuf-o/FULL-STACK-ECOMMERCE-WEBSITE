@@ -16,7 +16,8 @@ type ProductFormProps = {
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
-const AVAILABLE_TAILLES = ["S", "M", "L", "XL"];
+const CLOTHING_SIZES = ["S", "M", "L", "XL", "XXL"];
+const SHOE_SIZES = ["39", "40", "41", "42", "43", "44", "45"];
 
 const ProductForm = ({ type, product }: ProductFormProps) => {
   const router = useRouter();
@@ -44,7 +45,12 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
   const watchImages = watch("images");
   const watchTailles = watch("taille") || [];
 
-  /* -------------------- IMAGE UPLOAD -------------------- */
+  // -------------------- Determine sizes dynamically --------------------
+  const isShoeProduct =
+    watch("category")?.toLowerCase().includes("chaussures") || false;
+  const availableSizes = isShoeProduct ? SHOE_SIZES : CLOTHING_SIZES;
+
+  // -------------------- IMAGE UPLOAD --------------------
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -91,7 +97,7 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
     setValue("banner", null);
   };
 
-  /* -------------------- SUBMIT -------------------- */
+  // -------------------- SUBMIT --------------------
   const onSubmit = async (data: ProductFormValues) => {
     try {
       let res;
@@ -146,7 +152,7 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
                       type="text"
                       {...register(field as any)}
                       className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3
-                      text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition"
+                        text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition"
                     />
                     {errors[field as keyof ProductFormValues] && (
                       <p className="text-red-500 text-xs mt-1">
@@ -184,13 +190,13 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
                   />
                 </div>
 
-                {/* ---------------- TAILLES CHECKBOX ---------------- */}
+                {/* ---------------- TAILLES ---------------- */}
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium mb-2 block">
                     Available Sizes
                   </label>
-                  <div className="flex gap-4">
-                    {AVAILABLE_TAILLES.map((size) => (
+                  <div className="flex gap-4 flex-wrap">
+                    {availableSizes.map((size) => (
                       <label
                         key={size}
                         className="flex items-center gap-2 cursor-pointer"
@@ -294,9 +300,7 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600
-                px-6 py-3 text-sm font-semibold text-white
-                shadow-lg shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 transition"
+                className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 transition"
               >
                 {isSubmitting ? "Processing..." : `${type} Product`}
               </button>
