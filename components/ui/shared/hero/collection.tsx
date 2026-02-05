@@ -17,7 +17,7 @@ export default function HeroSection({ products }: { products: Product[] }) {
   return (
     <>
       {/* Hero Section */}
-      <section className="px-4 py-4 @container">
+      <section className="px-4  wrapper py-4 @container">
         <div className="relative group overflow-hidden rounded-xl bg-matte-black min-h-[500px] flex flex-col justify-end">
           <div
             className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"

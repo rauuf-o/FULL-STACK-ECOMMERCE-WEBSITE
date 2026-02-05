@@ -3,14 +3,6 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-");
-}
-
 export default function CategoriesSection({
   products,
 }: {
@@ -27,25 +19,29 @@ export default function CategoriesSection({
   const featured = categories[0];
   const rest = categories.slice(1);
 
-  // 3️⃣ Image resolver (latest product per category)
-  const getCategoryImage = (category: string) => {
-    const product = [...products]
-      .filter((p) => p.category === category && p.images?.[0])
-      .reverse()[0];
+  // ✅ Link builder: go directly to /shop with category selected
+  const shopCategoryHref = (category: string) =>
+    `/shop?category=${encodeURIComponent(category)}&page=1`;
 
+  // 3️⃣ Image resolver (pick a product image for this category)
+  // If your `products` is latest-first, this picks the first match with image.
+  const getCategoryImage = (category: string) => {
+    const product = products.find(
+      (p) => p.category === category && p.images?.[0],
+    );
     return product?.images?.[0] ?? "/images/category-fallback.jpg";
   };
 
   return (
     <>
       {/* Header */}
-      <section className="px-4 pt-8 pb-4">
+      <section className="px-4 wrapper pt-8 pb-4">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-2xl font-extrabold uppercase tracking-tight">
             Nos Catégories
           </h2>
           <Link
-            href="/categories"
+            href="/shop"
             className="text-primary text-xs font-bold uppercase border-b border-primary/60 hover:border-primary transition"
           >
             Voir tout
@@ -54,9 +50,9 @@ export default function CategoriesSection({
       </section>
 
       {/* Featured category */}
-      <section className="px-4 pb-4">
+      <section className="px-4 wrapper pb-4">
         <Link
-          href={`/category/${slugify(categories[0])}`}
+          href={shopCategoryHref(featured)}
           className="relative h-64 rounded-xl overflow-hidden group block"
         >
           <div
@@ -94,12 +90,12 @@ export default function CategoriesSection({
 
       {/* All remaining categories */}
       {rest.length > 0 && (
-        <section className="px-4 pb-8">
+        <section className="px-4 wrapper pb-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {rest.map((category) => (
               <Link
                 key={category}
-                href={`/category/${slugify(category)}`}
+                href={shopCategoryHref(category)}
                 className="relative h-56 rounded-xl overflow-hidden group block"
               >
                 <div

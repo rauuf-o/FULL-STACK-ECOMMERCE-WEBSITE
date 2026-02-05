@@ -38,7 +38,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
         <section className="space-y-3">
           {cart.items.map((item) => (
             <div
-              key={item.productId}
+              key={`${item.productId}-${item.taille || "no-size"}`}
               className="flex gap-4 bg-white dark:bg-[#121212] p-4 rounded-xl border dark:border-white/5 shadow-sm"
             >
               {/* IMAGE */}
@@ -64,14 +64,26 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                         {item.name}
                       </p>
                     </Link>
+                    {/* ✅ Show size if exists */}
+                    {item.taille && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Taille:{" "}
+                        <span className="font-semibold">
+                          {item.taille.toUpperCase()}
+                        </span>
+                      </p>
+                    )}
                   </div>
 
-                  {/* DELETE */}
+                  {/* DELETE - ✅ Pass taille */}
                   <button
                     disabled={isPending}
                     onClick={() =>
                       startTransition(async () => {
-                        const result = await removeItemFromCart(item.productId);
+                        const result = await removeItemFromCart(
+                          item.productId,
+                          item.taille,
+                        );
                         result?.success
                           ? toast.success("Produit supprimé")
                           : toast.error("Erreur");
@@ -90,11 +102,12 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                   </p>
 
                   <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 rounded-full px-3 py-1">
+                    {/* DECREASE - ✅ Pass taille */}
                     <button
                       disabled={isPending}
                       onClick={() =>
                         startTransition(async () => {
-                          await removeItemFromCart(item.productId);
+                          await removeItemFromCart(item.productId, item.taille);
                         })
                       }
                       className="h-7 w-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-black/5"
@@ -106,6 +119,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                       {item.quantity}
                     </span>
 
+                    {/* INCREASE - ✅ Already correct, passes full item */}
                     <button
                       disabled={isPending}
                       onClick={() =>
@@ -177,7 +191,6 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
         </aside>
       </div>
 
-      {/* ================= MOBILE BOTTOM BAR ================= */}
       {/* ================= MOBILE BOTTOM BAR ================= */}
       <section className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0a0a0a] border-t px-6 pt-6 shadow-[0_-10px_30px_rgba(0,0,0,0.15)]">
         <div className="max-w-lg mx-auto space-y-3">

@@ -1,5 +1,4 @@
 "use client";
-//THIS NEED A REWORK
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -7,9 +6,9 @@ import { useForm } from "react-hook-form";
 import { Product } from "@/types";
 import { productFormSchema } from "@/lib/validators";
 import { productDefaultValues } from "@/lib/constants";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { createProduct, updateProduct } from "@/actions/products.action";
-import { UploadButton } from "@/lib/uploadthing";
+
 type ProductFormProps = {
   type: "Create" | "Update";
   product?: Product;
@@ -17,11 +16,17 @@ type ProductFormProps = {
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
 
+const AVAILABLE_TAILLES = ["S", "M", "L", "XL"];
+
 const ProductForm = ({ type, product }: ProductFormProps) => {
   const router = useRouter();
 
-  const [imagePreview, setImagePreview] = useState<string[]>([]);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string[]>(
+    product?.images || [],
+  );
+  const [bannerPreview, setBannerPreview] = useState<string | null>(
+    product?.banner || null,
+  );
 
   const defaultValues =
     type === "Update" && product ? product : productDefaultValues;
@@ -30,7 +35,6 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    setError,
     setValue,
     watch,
   } = useForm<ProductFormValues>({
@@ -38,6 +42,7 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
   });
 
   const watchImages = watch("images");
+  const watchTailles = watch("taille") || [];
 
   /* -------------------- IMAGE UPLOAD -------------------- */
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,25 +50,27 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
     if (!files) return;
 
     const fileArray = Array.from(files);
-
-    // Use Promises to wait for all files to be read
-    const uploadPromises = fileArray.map((file) => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-    });
+    const uploadPromises = fileArray.map(
+      (file) =>
+        new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        }),
+    );
 
     const newImages = await Promise.all(uploadPromises);
 
-    // Update local preview state
     setImagePreview((prev) => [...prev, ...newImages]);
-
-    // Update React Hook Form state immediately with the full new list
     setValue("images", [...(watchImages || []), ...newImages], {
-      shouldValidate: true, // This forces Zod to re-check the field
+      shouldValidate: true,
     });
+  };
+
+  const removeImage = (index: number) => {
+    const updated = imagePreview.filter((_, i) => i !== index);
+    setImagePreview(updated);
+    setValue("images", updated);
   };
 
   const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,12 +86,6 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
     reader.readAsDataURL(file);
   };
 
-  const removeImage = (index: number) => {
-    const updated = imagePreview.filter((_, i) => i !== index);
-    setImagePreview(updated);
-    setValue("images", updated);
-  };
-
   const removeBanner = () => {
     setBannerPreview(null);
     setValue("banner", null);
@@ -94,13 +95,9 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
   const onSubmit = async (data: ProductFormValues) => {
     try {
       let res;
-
       if (type === "Create") {
-        // For creation, we just send the form data
         res = await createProduct(data);
       } else {
-        // For updates, we MUST have an ID.
-        // We take the ID from the 'product' prop passed to the component.
         if (!product?.id) {
           alert("Error: Cannot update a product without an ID.");
           return;
@@ -124,7 +121,6 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-10">
-          {/* Header */}
           <div className="mb-10">
             <h2 className="text-3xl font-bold text-gray-900">
               {type === "Create" ? "Create Product" : "Update Product"}
@@ -140,26 +136,21 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
               <h3 className="text-lg font-semibold">Basic Information</h3>
 
               <div className="grid md:grid-cols-2 gap-6">
-                {[
-                  { id: "name", label: "Product Name", type: "text" },
-                  { id: "slug", label: "Slug", type: "text" },
-                  { id: "category", label: "Category", type: "text" },
-                  { id: "brand", label: "Brand", type: "text" },
-                ].map(({ id, label, type }) => (
+                {["name", "slug", "category", "brand"].map((field) => (
                   <div
-                    key={id}
-                    className={id === "name" ? "md:col-span-2" : ""}
+                    key={field}
+                    className={field === "name" ? "md:col-span-2" : ""}
                   >
-                    <label className="text-sm font-medium">{label}</label>
+                    <label className="text-sm font-medium">{field}</label>
                     <input
-                      type={type}
-                      {...register(id as any)}
+                      type="text"
+                      {...register(field as any)}
                       className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3
                       text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition"
                     />
-                    {errors[id as keyof ProductFormValues] && (
+                    {errors[field as keyof ProductFormValues] && (
                       <p className="text-red-500 text-xs mt-1">
-                        {errors[id as keyof ProductFormValues]?.message}
+                        {errors[field as keyof ProductFormValues]?.message}
                       </p>
                     )}
                   </div>
@@ -191,6 +182,45 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
                     {...register("description")}
                     className="mt-2 w-full rounded-xl border px-4 py-3 resize-none focus:ring-4 focus:ring-blue-500/20"
                   />
+                </div>
+
+                {/* ---------------- TAILLES CHECKBOX ---------------- */}
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium mb-2 block">
+                    Available Sizes
+                  </label>
+                  <div className="flex gap-4">
+                    {AVAILABLE_TAILLES.map((size) => (
+                      <label
+                        key={size}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          value={size}
+                          checked={watchTailles.includes(size)}
+                          onChange={(e) => {
+                            const current = watchTailles || [];
+                            if (e.target.checked) {
+                              setValue("taille", [...current, size]);
+                            } else {
+                              setValue(
+                                "taille",
+                                current.filter((t: string) => t !== size),
+                              );
+                            }
+                          }}
+                          className="h-5 w-5 accent-blue-600"
+                        />
+                        <span className="text-sm font-medium">{size}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.taille && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.taille.message}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

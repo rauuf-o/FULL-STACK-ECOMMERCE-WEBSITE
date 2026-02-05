@@ -12,13 +12,21 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
+  // ✅ Match by productId AND taille (size)
   const existItem = useMemo(
-    () => cart?.items.find((x) => x.productId === item.productId),
-    [cart?.items, item.productId],
+    () =>
+      cart?.items.find(
+        (x) => x.productId === item.productId && x.taille === item.taille,
+      ),
+    [cart?.items, item.productId, item.taille],
   );
 
   const handleAddToCart = () => {
-    const id = toast.loading("Adding to cart...", { description: item.name });
+    const description = item.taille
+      ? `${item.name} - Size: ${item.taille.toUpperCase()}`
+      : item.name;
+
+    const id = toast.loading("Adding to cart...", { description });
 
     startTransition(async () => {
       const result = await addItemToCart(item);
@@ -29,7 +37,7 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
 
         toast.success("Added to cart", {
           id,
-          description: item.name,
+          description,
           action: {
             label: "View cart",
             onClick: () => router.push("/cart"),
@@ -45,10 +53,15 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
   };
 
   const handleRemoveFromCart = () => {
-    const id = toast.loading("Updating cart...", { description: item.name });
+    const description = item.taille
+      ? `${item.name} - Size: ${item.taille.toUpperCase()}`
+      : item.name;
+
+    const id = toast.loading("Updating cart...", { description });
 
     startTransition(async () => {
-      const res = await removeItemFromCart(item.productId);
+      // ✅ Pass taille to remove the correct item
+      const res = await removeItemFromCart(item.productId, item.taille);
 
       if (res?.success) {
         // ✅ UPDATE NAVBAR BADGE INSTANTLY
@@ -56,7 +69,7 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
 
         toast.success("Removed from cart", {
           id,
-          description: item.name,
+          description,
         });
       } else {
         toast.error("Failed to remove item", {
@@ -71,6 +84,14 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
   if (existItem) {
     return (
       <div className="mt-3 w-full rounded-xl border bg-background p-3">
+        {/* Show selected size */}
+        {item.taille && (
+          <div className="mb-2 text-center text-xs text-muted-foreground">
+            Size:{" "}
+            <span className="font-semibold">{item.taille.toUpperCase()}</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-2">
             <Button
@@ -118,7 +139,7 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
   // ✅ Primary CTA when not in cart
   return (
     <Button
-      className="mt-3 w-full gap-2 rounded-xl"
+      className="mt-3 w-full gap-2 rounded-xl p-8"
       type="button"
       onClick={handleAddToCart}
       disabled={isPending}

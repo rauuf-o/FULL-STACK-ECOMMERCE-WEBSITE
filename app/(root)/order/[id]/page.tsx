@@ -173,11 +173,25 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                           </p>
                         </div>
 
-                        <p className="shrink-0 font-semibold">
-                          {formatDZD(
-                            Number(item.price ?? 0) * Number(item.qty ?? 0),
+                        <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                          {item.taille && (
+                            <span className="rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
+                              Size {String(item.taille).toUpperCase()}
+                            </span>
                           )}
-                        </p>
+
+                          <span>
+                            Qty{" "}
+                            <span className="font-medium text-foreground">
+                              {Number(item.qty ?? 0)}
+                            </span>
+                          </span>
+
+                          <span className="hidden sm:inline">•</span>
+                          <span className="hidden sm:inline">
+                            {formatDZD(Number(item.price ?? 0))}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

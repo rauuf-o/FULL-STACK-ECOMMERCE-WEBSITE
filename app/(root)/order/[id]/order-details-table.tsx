@@ -32,6 +32,8 @@ type OrderItem = {
   qty: number;
   image?: string | null;
   slug?: string | null;
+  // ✅ add this
+  taille?: string | null;
 };
 
 type SafeOrder = {
@@ -223,9 +225,25 @@ export default function OrderDetailsTable({ order }: { order: SafeOrder }) {
                           ) : (
                             <p className="font-medium">{item.name}</p>
                           )}
-                          <p className="text-sm text-muted-foreground">
-                            {formatDZD(item.price)} • Qty {item.qty}
-                          </p>
+                          <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                            {item.taille && (
+                              <span className="rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
+                                Size {item.taille.toUpperCase()}
+                              </span>
+                            )}
+
+                            <span>
+                              Qty{" "}
+                              <span className="font-medium text-foreground">
+                                {item.qty}
+                              </span>
+                            </span>
+
+                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:inline">
+                              {formatDZD(item.price)}
+                            </span>
+                          </div>
                         </div>
 
                         <p className="font-semibold">

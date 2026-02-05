@@ -23,7 +23,13 @@ import { ShippingAddress } from "@/types";
 import { updateUserAdress } from "@/actions/user.action";
 import { saveCartShippingAddress } from "@/actions/cart-action";
 
-import { User, Phone, Home, MapPin, Store, CreditCard } from "lucide-react";
+import { User, Phone, Home, MapPin, Store } from "lucide-react";
+
+// ✅ NEW: use your wilaya prices map + shipping calculator
+import {
+  SHIPPING_RATES_BY_WILAYA,
+  getShippingPriceByWilaya,
+} from "@/lib/shippingRates";
 
 type ShippingFormProps = {
   addresse?: ShippingAddress;
@@ -57,6 +63,12 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
   });
 
   const deliveryType = form.watch("deliveryType");
+  const wilaya = form.watch("wilaya");
+
+  // ✅ live shipping preview
+  const liveShippingPrice = wilaya
+    ? getShippingPriceByWilaya(wilaya, deliveryType)
+    : 0;
 
   const onSubmit: SubmitHandler<ShippingFormData> = async (values) => {
     startTransition(async () => {
@@ -78,6 +90,12 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
       router.push("/confirmed");
     });
   };
+
+  const wilayaOptions = useMemo(
+    () =>
+      Object.keys(SHIPPING_RATES_BY_WILAYA).sort((a, b) => a.localeCompare(b)),
+    [],
+  );
 
   return (
     <div className="rounded-2xl border bg-background p-6 shadow-lg max-w-md mx-auto">
@@ -157,29 +175,45 @@ const ShippingForm = ({ addresse, isGuest }: ShippingFormProps) => {
             )}
           />
 
+          {/* ✅ WILAYA (shared for both HOME & STOP_DESK) */}
+          <FormField
+            control={form.control}
+            name="wilaya"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" /> Wilaya
+                </FormLabel>
+                <FormControl>
+                  <select
+                    className="h-12 w-full rounded-xl border bg-background px-4 text-sm shadow-sm hover:shadow-md transition"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  >
+                    <option value="">Sélectionner une wilaya</option>
+                    {wilayaOptions.map((w) => (
+                      <option key={w} value={w}>
+                        {w}
+                      </option>
+                    ))}
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* ✅ Live Shipping Preview */}
+          <div className="rounded-xl border p-4 text-sm flex items-center justify-between">
+            <span className="text-muted-foreground">Frais de livraison</span>
+            <span className="font-bold text-primary">
+              DZD {Number(liveShippingPrice).toFixed(0)}
+            </span>
+          </div>
+
           {/* HOME fields */}
           {deliveryType === "HOME" && (
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="wilaya"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary" /> Wilaya
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Alger"
-                        {...field}
-                        className="rounded-xl border shadow-sm hover:shadow-md transition"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="baladiya"

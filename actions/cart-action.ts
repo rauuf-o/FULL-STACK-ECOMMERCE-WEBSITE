@@ -76,9 +76,9 @@ export async function addItemToCart(data: CartItem) {
       };
     }
 
-    // check if item already exists in cart
+    // ✅ check if item already exists in cart (match by productId AND taille)
     const existItem = (cart.items as CartItem[]).find(
-      (x) => x.productId === item.productId,
+      (x) => x.productId === item.productId && x.taille === item.taille,
     );
 
     if (existItem) {
@@ -89,7 +89,7 @@ export async function addItemToCart(data: CartItem) {
 
       //increase quantity
       const itemToUpdate = (cart.items as CartItem[]).find(
-        (x) => x.productId === item.productId,
+        (x) => x.productId === item.productId && x.taille === item.taille,
       )!;
       itemToUpdate.quantity = existItem.quantity + 1;
     } else {
@@ -119,6 +119,7 @@ export async function addItemToCart(data: CartItem) {
       message:
         " " +
         product.name +
+        (item.taille ? ` (Size: ${item.taille.toUpperCase()})` : "") +
         " " +
         (existItem ? "quantity increased" : "added to cart"),
     };
@@ -154,7 +155,8 @@ export async function getCartItems() {
   // ✅ return a plain object (safe for Next.js)
   return convertCartToPlainObject(cart);
 }
-export async function removeItemFromCart(productId: string) {
+
+export async function removeItemFromCart(productId: string, taille?: string) {
   try {
     const sessionCartId = (await cookies()).get("sessionCartId")?.value;
     if (!sessionCartId) throw new Error("No cart session ID found");
@@ -172,16 +174,23 @@ export async function removeItemFromCart(productId: string) {
 
     const items = (cart.items as CartItem[]) ?? [];
 
-    const existItem = items.find((x) => x.productId === productId);
+    // ✅ find item by productId AND taille (if provided)
+    const existItem = items.find(
+      (x) => x.productId === productId && x.taille === taille,
+    );
     if (!existItem) throw new Error("Item not found in cart");
 
     // ✅ build updated items array (no in-place mutation)
     const updatedItems: CartItem[] =
       existItem.quantity > 1
         ? items.map((x) =>
-            x.productId === productId ? { ...x, quantity: x.quantity - 1 } : x,
+            x.productId === productId && x.taille === taille
+              ? { ...x, quantity: x.quantity - 1 }
+              : x,
           )
-        : items.filter((x) => x.productId !== productId);
+        : items.filter(
+            (x) => !(x.productId === productId && x.taille === taille),
+          );
 
     const prices = calcPrice(updatedItems);
 
@@ -201,13 +210,14 @@ export async function removeItemFromCart(productId: string) {
 
     return {
       success: true,
-      message: `Removed from cart ${product.name}`,
+      message: `Removed from cart ${product.name}${taille ? ` (Size: ${taille.toUpperCase()})` : ""}`,
     };
   } catch (error) {
     console.log("❌ removeItemFromCart error:", error); // ✅ SEE REAL ERROR IN TERMINAL
     return { success: false, message: formatError(error) };
   }
 }
+
 export async function saveCartShippingAddress(address: ShippingAddress) {
   try {
     const cookieStore = await cookies();
@@ -234,6 +244,7 @@ export async function saveCartShippingAddress(address: ShippingAddress) {
     return { success: false, message: (e as Error).message };
   }
 }
+
 export async function getCartCount() {
   const cart = await getCartItems();
 

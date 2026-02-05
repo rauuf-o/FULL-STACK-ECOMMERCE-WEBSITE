@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider        = "prisma-client"
   output          = "../lib/generated/prisma"
@@ -29,6 +23,7 @@ model Product {
   isFeatured  Boolean     @default(false)
   banner      String?
   createdAt   DateTime    @default(now()) @db.Timestamp(6)
+  taille      Json?
   orderItems  OrderItem[]
 }
 
@@ -45,13 +40,13 @@ model User {
   createdAt     DateTime  @default(now()) @db.Timestamp(6)
   updatedAt     DateTime  @updatedAt
   account       Account[]
-  session       Session[]
-  cart          Cart[]
+  cart          Cart?
   orders        Order[]
+  session       Session[]
 }
 
 model Account {
-  userId            String  @db.Uuid
+  userId            String   @db.Uuid
   type              String
   provider          String
   providerAccountId String
@@ -62,11 +57,9 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
 }
@@ -75,10 +68,9 @@ model Session {
   sessionToken String   @id
   userId       String   @db.Uuid
   expires      DateTime @db.Timestamp(6)
+  createdAt    DateTime @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @db.Timestamp(6)
-  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -91,18 +83,15 @@ model VerificationToken {
 
 model Cart {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId          String?  @db.Uuid
-  sessionId       String
+  userId          String?  @unique(map: "cart_user_idx") @db.Uuid
+  sessionId       String   @unique(map: "cart_session_idx")
   items           Json[]   @default([]) @db.Json
   itemsPrice      Int      @default(0)
   totalPrice      Int      @default(0)
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
   shippingPrice   Int      @default(0)
   shippingAddress Json?    @db.Json
-  createdAt       DateTime @default(now()) @db.Timestamp(6)
   user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId], map: "cart_user_idx")
-  @@unique([sessionId], map: "cart_session_idx")
 }
 
 model Order {
@@ -127,8 +116,11 @@ model OrderItem {
   name      String
   slug      String
   image     String
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taille    String?
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@id([orderId, productId], map: "orderitems-orderId-productId-pK")
+  @@index([orderId])
+  @@index([productId])
 }

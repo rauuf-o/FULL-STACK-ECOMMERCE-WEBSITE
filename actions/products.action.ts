@@ -1,32 +1,28 @@
 "use server";
 import { productInsertSchema, updateProductSchema } from "@/lib/validators";
-
 import { prisma } from "../db/prisma";
-import { PrismaPg } from "@prisma/adapter-pg";
-import "dotenv/config";
 import { convertCartToPlainObject, prismaToJson } from "../lib/utils";
-import { LATEST_PRODUCTS_LIMIT } from "../lib/constants";
-import { PAGE_SIZE } from "../lib/constants";
+import { LATEST_PRODUCTS_LIMIT, PAGE_SIZE } from "../lib/constants";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+
+// Get latest products
 export async function getLatestProducts() {
   const data = await prisma.product.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: { createdAt: "desc" },
   });
   return prismaToJson(data);
 }
-//get product by slug
+
+// Get product by slug
 export async function getProductBySlug(slug: string) {
   const product = await prisma.product.findFirst({
-    where: {
-      slug: slug,
-    },
+    where: { slug },
   });
   return prismaToJson(product);
 }
-//get all products
+
+// Get all products
 export async function getAllProducts({
   query,
   limit = PAGE_SIZE,
@@ -39,18 +35,29 @@ export async function getAllProducts({
   category?: string;
 }) {
   const data = await prisma.product.findMany({
+    where: category ? { category } : undefined,
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * limit,
     take: limit,
   });
-  const dataCount = await prisma.product.count();
+  const dataCount = await prisma.product.count({
+    where: category ? { category } : undefined,
+  });
+
   return {
     data,
     totalPages: Math.ceil(dataCount / limit),
     dataCount,
   };
 }
-//delete Product
+
+// Get product by ID
+export async function getProductById(id: string) {
+  const data = await prisma.product.findUnique({ where: { id } });
+  return convertCartToPlainObject(data);
+}
+
+// Delete Product
 export async function deleteProduct(productId: string) {
   try {
     await prisma.product.delete({ where: { id: productId } });
@@ -64,7 +71,8 @@ export async function deleteProduct(productId: string) {
     };
   }
 }
-//create product
+
+// Create Product
 export async function createProduct(data: z.infer<typeof productInsertSchema>) {
   try {
     const product = productInsertSchema.parse(data);
@@ -79,18 +87,24 @@ export async function createProduct(data: z.infer<typeof productInsertSchema>) {
     };
   }
 }
+
+// Update Product
 export async function updateProduct(data: z.infer<typeof updateProductSchema>) {
   try {
     const product = updateProductSchema.parse(data);
+
     const productExist = await prisma.product.findUnique({
-      where: {
-        id: product.id,
-      },
+      where: { id: product.id },
     });
     if (!productExist) {
       throw new Error("Product not found");
     }
-    await prisma.product.update({ where: { id: product.id }, data: product });
+
+    await prisma.product.update({
+      where: { id: product.id },
+      data: product,
+    });
+
     revalidatePath("/admin/products");
     return { success: true, message: "Product Has Been Updated" };
   } catch (error: any) {
@@ -101,11 +115,37 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>) {
     };
   }
 }
-export async function getProductById(id: string) {
-  const data = await prisma.product.findUnique({
-    where: {
-      id: id,
-    },
-  });
-  return convertCartToPlainObject(data);
+export async function getProductsByCategory(categorySlug: string) {
+  try {
+    console.log("Fetching products for category:", categorySlug);
+
+    // ✅ Convert slug back to category name
+    // "mens-dress-shirts" → "Men Dress"
+    const categoryName = categorySlug
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+    console.log("Converted to category name:", categoryName);
+
+    const products = await prisma.product.findMany({
+      where: {
+        category: {
+          contains: categoryName, // ✅ Use contains for partial match
+          mode: "insensitive", // ✅ Case-insensitive search
+        },
+        stock: { gt: 0 },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    console.log(
+      `Found ${products.length} products for category ${categoryName}`,
+    );
+
+    return products.map((p) => convertCartToPlainObject(p));
+  } catch (err) {
+    console.error("Error fetching products by category:", err);
+    return [];
+  }
 }

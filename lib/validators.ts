@@ -14,12 +14,15 @@ export const productInsertSchema = z.object({
   isFeatured: z.boolean(),
   banner: z.string().nullable(),
   price: z.coerce.number().min(0, "Price must be a positive number"),
+  taille: z.array(z.string()).optional(), // <-- JSON array validation
 });
-//update product schema
+
+// Update schema
 export const updateProductSchema = productInsertSchema.extend({
   id: z.string().min(1, "Product ID is required"),
 });
-// ✅ Unified schema for the form
+
+// Form schema
 export const productFormSchema = productInsertSchema.extend({
   id: z.string().optional(),
 });
@@ -54,7 +57,9 @@ export const cartItemSchema = z.object({
   slug: z.string().min(1, "Slug is required"),
   image: z.string().min(1, "Image is required"),
   price: z.coerce.number().min(0, "Price must be a non-negative number"),
+  taille: z.string().optional(), // ✅ Add this line
 });
+
 export const cartSchema = z.object({
   items: z.array(cartItemSchema),
   itemsPrice: z.coerce.number().min(0, "Items price must be non-negative"),
@@ -71,6 +76,10 @@ export const shippingAddressSchema = z.discriminatedUnion("deliveryType", [
     deliveryType: z.literal("STOP_DESK"),
     fullName: z.string().min(3, "Full name must be at least 3 characters long"),
     phoneNumber: z.string().min(8, "Phone number must be at least 8 digits"),
+
+    // ✅ add this
+    wilaya: z.string().min(2, "Wilaya is required"),
+
     stopDeskId: z.string().min(1, "Please select a stop desk"),
   }),
 
@@ -78,6 +87,7 @@ export const shippingAddressSchema = z.discriminatedUnion("deliveryType", [
     deliveryType: z.literal("HOME"),
     fullName: z.string().min(3, "Full name must be at least 3 characters long"),
     phoneNumber: z.string().min(8, "Phone number must be at least 8 digits"),
+
     wilaya: z.string().min(2, "Wilaya is required"),
     baladiya: z.string().min(2, "Baladiya is required"),
     address: z.string().min(5, "Address must be at least 5 characters long"),
@@ -85,18 +95,20 @@ export const shippingAddressSchema = z.discriminatedUnion("deliveryType", [
 ]);
 //schema for inserting orders
 export const insertOrderSchema = z.object({
-  userId: z.string().nullable(), // ✅ this is the fix
+  userId: z.string().nullable(),
   shippingAddress: z.any(), // or your ShippingAddress schema
   itemsPrice: z.number(),
   shippingPrice: z.number(),
   totalPrice: z.number(),
 });
-//schema for inserting order item
+
+// ✅ Add taille field
 export const insertOrderItemSchema = z.object({
   productId: z.string().min(1, "Product ID is required"),
   slug: z.string(),
   image: z.string(),
   name: z.string(),
-  price: z.coerce.number().min(0, "Items price must be non-negative"),
-  qty: z.coerce.number().min(0, "Items price must be non-negative"),
+  price: z.coerce.number().min(0, "Price must be non-negative"),
+  qty: z.coerce.number().min(0, "Quantity must be non-negative"),
+  taille: z.string().optional(), // ✅ Add this
 });

@@ -10,6 +10,8 @@ import { insertOrderSchema } from "@/lib/validators";
 import { convertCartToPlainObject } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { PAGE_SIZE } from "../lib/constants";
+import { getShippingPriceByWilaya } from "@/lib/shippingRates";
+import { shippingAddressSchema } from "@/lib/validators";
 
 export async function createOrder() {
   try {
@@ -49,13 +51,26 @@ export async function createOrder() {
       };
     }
 
+    // ✅ (recommended) validate shipping address
+    // ensures address has deliveryType + wilaya, etc.
+    const validatedAddress = shippingAddressSchema.parse(address);
+
+    // ✅ compute shipping price server-side
+    const shippingPrice = getShippingPriceByWilaya(
+      validatedAddress.wilaya,
+      validatedAddress.deliveryType,
+    );
+
+    // ✅ compute total using server truth
+    const totalPrice = cart.itemsPrice + shippingPrice;
+
     // validate order with ZOD
     const validatedOrder = insertOrderSchema.parse({
       userId: userId ?? null,
-      shippingAddress: address,
+      shippingAddress: validatedAddress, // ✅ use validated address
       itemsPrice: cart.itemsPrice,
-      shippingPrice: cart.shippingPrice,
-      totalPrice: cart.totalPrice,
+      shippingPrice, // ✅ override cart.shippingPrice
+      totalPrice, // ✅ override cart.totalPrice
     });
 
     console.log("createOrder validatedOrder:", validatedOrder);
@@ -75,10 +90,12 @@ export async function createOrder() {
           slug: item.slug,
           image: item.image,
           price: item.price,
-          qty: item.quantity, // keep this only if your prisma field is qty
+          qty: item.quantity,
+          taille: item.taille || null,
         })),
       });
 
+      // ✅ clear cart (keep your logic)
       await tx.cart.update({
         where: { id: cart.id },
         data: {
@@ -107,6 +124,7 @@ export async function createOrder() {
     };
   }
 }
+
 //get order by id
 export async function getOrderById(orderId: string | undefined) {
   if (!orderId) return null; // ✅ important
@@ -114,7 +132,7 @@ export async function getOrderById(orderId: string | undefined) {
   const data = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      orderItems: true,
+      orderItems: true, // ✅ Now includes taille field
       user: { select: { name: true, email: true } },
     },
   });
@@ -144,26 +162,6 @@ export async function getOrderSummary() {
     _sum: { totalPrice: true },
   });
 
-  // get monthly sales
-  const salesDataRaw = await prisma.$queryRaw<
-    Array<{
-      month: string;
-      totalSales: number;
-    }>
-  >`
-    SELECT
-      to_char("createdAt", 'MM/YY') as "month",
-      sum("totalPrice") as "totalSales"
-    FROM "Order"
-    GROUP BY to_char("createdAt", 'MM/YY')
-    ORDER BY min("createdAt") ASC
-  `;
-
-  const salesData = salesDataRaw.map((entry) => ({
-    month: entry.month,
-    totalSales: Number(entry.totalSales),
-  }));
-
   // latest sales: extract customerName + customerPhone from shippingAddress
   const latestOrdersRaw = await prisma.order.findMany({
     take: 6,
@@ -173,7 +171,7 @@ export async function getOrderSummary() {
       createdAt: true,
       totalPrice: true,
 
-      orderItems: true,
+      orderItems: true, // ✅ Now includes taille field
       shippingAddress: true, // internal use only (we won't return it)
     },
   });
@@ -186,7 +184,7 @@ export async function getOrderSummary() {
       createdAt: order.createdAt,
       totalPrice: order.totalPrice,
 
-      orderItems: order.orderItems,
+      orderItems: order.orderItems, // ✅ Includes taille
 
       customerName: address.fullName ?? "Unknown",
       customerPhone: address.phoneNumber ?? "N/A",
@@ -198,10 +196,10 @@ export async function getOrderSummary() {
     ProductCount,
     UserCount,
     totalSales,
-    salesData,
     latestSales,
   };
 }
+
 //get all orders
 // get all orders (with customerName + customerPhone from shippingAddress)
 export async function getAllOrders({
@@ -240,6 +238,7 @@ export async function getAllOrders({
 
   return mapped.map((o) => convertCartToPlainObject(o));
 }
+
 //delete order
 export async function deleteOrder(orderId: string) {
   try {
@@ -254,6 +253,7 @@ export async function deleteOrder(orderId: string) {
     };
   }
 }
+
 //order update to Delivered
 export async function updateOrderToDelivered(orderId: string) {
   try {
