@@ -70,15 +70,15 @@ const ConfirmedPage = async () => {
       <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">
-            Review & Place Order
+            Vérifier Et Passer La Commande
           </h1>
           <p className="text-sm text-muted-foreground">
-            Please review your order before confirming.
+            Veuillez vérifier votre commande avant de la confirmer.
           </p>
         </div>
 
         <Link href="/cart" className="hidden md:block">
-          <Button variant="outline">Back to cart</Button>
+          <Button variant="outline">Retour au panier</Button>
         </Link>
       </div>
 
@@ -241,7 +241,7 @@ const ConfirmedPage = async () => {
 
               <Link href="/cart" className="md:hidden">
                 <Button variant="outline" className="w-full">
-                  Back to cart
+                  Retour au panier
                 </Button>
               </Link>
             </CardContent>

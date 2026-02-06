@@ -130,7 +130,7 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
           onClick={() => router.push("/cart")}
           disabled={isPending}
         >
-          Open cart
+          Voir Le Panier
         </Button>
       </div>
     );
@@ -145,7 +145,7 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
       disabled={isPending}
     >
       <ShoppingCart className="size-4" />
-      Add to cart
+      Ajouter Au Panier
     </Button>
   );
 };
