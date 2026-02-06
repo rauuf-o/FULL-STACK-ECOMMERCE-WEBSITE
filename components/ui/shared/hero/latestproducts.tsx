@@ -1,49 +1,11 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getLatestProducts } from "@/actions/products.action";
 import { Product } from "@/types";
 
-type LatestProductsSectionProps = {
-  limit?: number;
+type LatestProductsProps = {
+  products: Product[];
 };
 
-export default function LatestProductsSection({
-  limit = 7,
-}: LatestProductsSectionProps) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const data = await getLatestProducts();
-        const typedProducts: Product[] = (data as unknown[]).map((p) => {
-          const prod = p as unknown as Product & { createdAt: string | Date };
-          return {
-            ...prod,
-            createdAt: new Date(prod.createdAt as string),
-            rating: prod.rating || "0",
-          };
-        });
-        setProducts(typedProducts.slice(0, limit));
-      } catch (error) {
-        console.error("Error fetching latest products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [limit]);
-
-  if (loading)
-    return (
-      <p className="text-center py-10 text-white">Loading latest products...</p>
-    );
+export default function LatestProducts({ products }: LatestProductsProps) {
   if (!products.length)
     return <p className="text-center py-10 text-white">No products found.</p>;
 
@@ -64,7 +26,7 @@ export default function LatestProductsSection({
         </div>
       </section>
 
-      {/* All Products */}
+      {/* Products Grid */}
       <section className="px-4 wrapper pb-8">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map((product) => (
@@ -92,7 +54,7 @@ export default function LatestProductsSection({
         </div>
       </section>
 
-      {/* Button to see all products */}
+      {/* See all button */}
       <div className="flex justify-center mb-10 pb-12">
         <Link
           href="/shop"

@@ -1,9 +1,6 @@
-import HeroSection from "../hero/collection";
 import ProductCard from "./product-card";
 import { Product } from "@/types";
-import CategoriesSection from "../hero/CategoriesSection";
-import TrustSection from "../hero/TrustSection";
-import LatestProducts from "../hero/latestproducts";
+
 const ProductsList = ({
   data,
   title,
@@ -13,18 +10,22 @@ const ProductsList = ({
   title?: string;
   limit?: number;
 }) => {
-  const limitedData = limit ? data.slice(0, limit) : data;
+  // Only slice if limit is defined and smaller than data length
+  const limitedData =
+    limit && limit < data.length ? data.slice(0, limit) : data;
+
+  if (!limitedData || limitedData.length === 0) return null;
 
   return (
-    <div className="my-10">
-      <HeroSection products={data} />
+    <section className="my-10">
+      {title && <h2 className="text-2xl font-bold mb-6">{title}</h2>}
 
-      {/* ✅ NEW: Categories section using same products data */}
-      <CategoriesSection products={data} />
-      <LatestProducts limit={7} />
-
-      <TrustSection />
-    </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {limitedData.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </section>
   );
 };
 

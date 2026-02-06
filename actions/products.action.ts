@@ -11,17 +11,31 @@ import {
 import { LATEST_PRODUCTS_LIMIT, PAGE_SIZE } from "@/lib/constants";
 import { productInsertSchema, updateProductSchema } from "@/lib/validators";
 import type { Product } from "@/types";
+import { cache } from "react";
 
 // ----------------------------
 // Get latest products
 // ----------------------------
-export async function getLatestProducts(): Promise<Product[]> {
-  const data = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+export const getLatestProducts = cache(
+  async (limit = 7): Promise<Product[]> => {
+    const data = await prisma.product.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit, // Only fetch what you need
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        images: true,
+        category: true,
+        isFeatured: true,
+        createdAt: true,
+      },
+    });
 
-  return prismaToJson(data) as Product[];
-}
+    return prismaToJson(data) as Product[];
+  },
+);
 
 // ----------------------------
 // Get product by slug
@@ -153,3 +167,20 @@ export async function getProductsByCategory(
 
   return products.map((p) => convertCartToPlainObject(p) as unknown as Product);
 }
+export const getLastProduct = cache(async (): Promise<Product | null> => {
+  const data = await prisma.product.findFirst({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      price: true,
+      images: true,
+      category: true,
+      isFeatured: true,
+      createdAt: true,
+    },
+  });
+
+  return data ? (prismaToJson(data) as Product) : null;
+});
