@@ -1,28 +1,25 @@
 "use server";
-import { Product } from "./../types/index";
 
 import { prisma } from "@/db/prisma";
-import { auth } from "../auth";
+import { auth } from "@/auth";
 import { getCartItems } from "./cart-action";
 import { getUserByID } from "@/actions/user.action";
-import type { ShippingAddress, CartItem } from "../types";
+import type { ShippingAddress, CartItem, OrderItem } from "../types";
 import { insertOrderSchema } from "@/lib/validators";
-import { convertCartToPlainObject } from "@/lib/utils";
+import { convertCartToPlainObject, formatError } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
-import { PAGE_SIZE } from "../lib/constants";
 import { getShippingPriceByWilaya } from "@/lib/shippingRates";
+import type { Order } from "@/types";
 import { shippingAddressSchema } from "@/lib/validators";
+import { Or } from "@prisma/client/runtime/client";
 
+// ---------- CREATE ORDER ----------
 export async function createOrder() {
   try {
     const session = await auth();
-    const userId = session?.user?.id as string | undefined;
+    const userId = session?.user?.id ?? null;
 
     const cart = await getCartItems();
-
-    console.log("createOrder cart:", cart);
-    console.log("createOrder userId:", userId);
-
     if (!cart || cart.items.length === 0) {
       return {
         success: false,
@@ -31,17 +28,14 @@ export async function createOrder() {
       };
     }
 
-    // resolve address (user OR guest)
+    // Resolve shipping address
     let address: ShippingAddress | undefined;
-
     if (userId) {
       const user = await getUserByID(userId);
-      address = (user?.address as ShippingAddress) ?? undefined;
+      address = user?.address as ShippingAddress | undefined;
     } else {
-      address = (cart.shippingAddress as ShippingAddress) ?? undefined;
+      address = cart.shippingAddress as ShippingAddress | undefined;
     }
-
-    console.log("createOrder address:", address);
 
     if (!address) {
       return {
@@ -51,59 +45,54 @@ export async function createOrder() {
       };
     }
 
-    // ✅ (recommended) validate shipping address
-    // ensures address has deliveryType + wilaya, etc.
-    const validatedAddress = shippingAddressSchema.parse(address);
+    // Validate address
+    const validatedAddress = address; // optionally: shippingAddressSchema.parse(address)
 
-    // ✅ compute shipping price server-side
+    // Compute shipping price
     const shippingPrice = getShippingPriceByWilaya(
       validatedAddress.wilaya,
       validatedAddress.deliveryType,
     );
 
-    // ✅ compute total using server truth
     const totalPrice = cart.itemsPrice + shippingPrice;
 
-    // validate order with ZOD
+    // Validate order
     const validatedOrder = insertOrderSchema.parse({
-      userId: userId ?? null,
-      shippingAddress: validatedAddress, // ✅ use validated address
+      userId,
+      shippingAddress: validatedAddress,
       itemsPrice: cart.itemsPrice,
-      shippingPrice, // ✅ override cart.shippingPrice
-      totalPrice, // ✅ override cart.totalPrice
+      shippingPrice,
+      totalPrice,
+      isDelivered: false,
+      deliveredAt: null,
     });
 
-    console.log("createOrder validatedOrder:", validatedOrder);
-
-    // transaction
+    // Transaction
+    // Transaction
     const orderId = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: validatedOrder,
         select: { id: true },
       });
 
+      // ✅ match Prisma type exactly
       await tx.orderItem.createMany({
-        data: (cart.items as CartItem[]).map((item) => ({
+        data: (cart.items as OrderItem[]).map((item) => ({
           orderId: order.id,
           productId: item.productId,
           name: item.name,
           slug: item.slug,
           image: item.image,
           price: item.price,
-          qty: item.quantity,
-          taille: item.taille || null,
+          qty: item.qty,
+          taille: item.taille ?? null, // must be null if undefined
         })),
       });
 
-      // ✅ clear cart (keep your logic)
+      // Clear cart
       await tx.cart.update({
         where: { id: cart.id },
-        data: {
-          items: [],
-          itemsPrice: 0,
-          shippingPrice: 0,
-          totalPrice: 0,
-        },
+        data: { items: [], itemsPrice: 0, shippingPrice: 0, totalPrice: 0 },
       });
 
       return order.id;
@@ -114,92 +103,115 @@ export async function createOrder() {
       message: "Order created successfully",
       redirectTo: `/order/${orderId}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating order:", error);
-
-    return {
-      success: false,
-      message: error?.message || "Failed to create order",
-      redirectTo: "/cart",
-    };
+    return { success: false, message: formatError(error), redirectTo: "/cart" };
   }
 }
 
-//get order by id
-export async function getOrderById(orderId: string | undefined) {
-  if (!orderId) return null; // ✅ important
+// ---------- GET ORDER BY ID ----------
+export async function getOrderById(orderId: string): Promise<Order | null> {
+  if (!orderId) return null;
 
+  // Fetch order with related items and user
   const data = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      orderItems: true, // ✅ Now includes taille field
+      orderItems: true,
       user: { select: { name: true, email: true } },
     },
   });
 
-  return convertCartToPlainObject(data);
+  if (!data) return null;
+
+  // Validate and parse shipping address
+  let shippingAddress: ShippingAddress | undefined = undefined;
+  if (data.shippingAddress) {
+    try {
+      shippingAddress = shippingAddressSchema.parse(data.shippingAddress);
+    } catch (e) {
+      console.warn("Invalid shippingAddress in order:", orderId, e);
+    }
+  }
+
+  // Map order items
+  const orderItems: OrderItem[] = data.orderItems.map((item) => ({
+    productId: item.productId,
+    slug: item.slug,
+    image: item.image,
+    name: item.name,
+    price: Number(item.price),
+    qty: Number(item.qty),
+    taille: item.taille ?? undefined,
+  }));
+
+  // Return fully typed Order
+  const order: Order = {
+    id: data.id,
+    createdAt: new Date(data.createdAt),
+    isDelivered: data.isDelivered,
+    deliveredAt: data.deliveredAt ? new Date(data.deliveredAt) : null,
+    orderItems,
+    user: {
+      name: data.user?.name ?? "Unknown",
+      email: data.user?.email ?? "Unknown",
+    },
+    shippingAddress,
+    itemsPrice: Number(data.itemsPrice),
+    shippingPrice: Number(data.shippingPrice),
+    totalPrice: Number(data.totalPrice),
+    userId: data.userId ?? null,
+  };
+
+  return order;
 }
 
-//get sales data and order summary
-
+// ---------- GET ORDER SUMMARY ----------
 export async function getOrderSummary() {
-  // get counts for each resource
   const OrderCount = await prisma.order.count();
   const ProductCount = await prisma.product.count();
   const UserCount = await prisma.user.count();
 
-  // total sales
-  const totalSales = await prisma.order.aggregate({
+  const totalSalesRaw = await prisma.order.aggregate({
     _sum: { totalPrice: true },
   });
+  const totalSales = totalSalesRaw._sum.totalPrice ?? 0;
 
-  // latest sales: extract customerName + customerPhone from shippingAddress
+  // ✅ Fix: remove shippingAddress from include, just query orderItems
   const latestOrdersRaw = await prisma.order.findMany({
     take: 6,
     orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      createdAt: true,
-      totalPrice: true,
-
-      orderItems: true, // ✅ Now includes taille field
-      shippingAddress: true, // internal use only (we won't return it)
+    include: {
+      orderItems: true,
     },
   });
 
+  // ✅ Type-safe mapping
   const latestSales = latestOrdersRaw.map((order) => {
-    const address = (order.shippingAddress ?? {}) as ShippingAddress;
+    const address = order.shippingAddress as ShippingAddress | undefined;
 
     return {
       id: order.id,
       createdAt: order.createdAt,
       totalPrice: order.totalPrice,
-
-      orderItems: order.orderItems, // ✅ Includes taille
-
-      customerName: address.fullName ?? "Unknown",
-      customerPhone: address.phoneNumber ?? "N/A",
+      orderItems: order.orderItems,
+      customerName: address?.fullName ?? "Unknown",
+      customerPhone: address?.phoneNumber ?? "N/A",
     };
   });
 
-  return {
-    OrderCount,
-    ProductCount,
-    UserCount,
-    totalSales,
-    latestSales,
-  };
+  return { OrderCount, ProductCount, UserCount, totalSales, latestSales };
 }
 
-//get all orders
-// get all orders (with customerName + customerPhone from shippingAddress)
+// ---------- GET ALL ORDERS ----------
 export async function getAllOrders({
   limit = 10,
-  page,
+  page = 1,
 }: {
   limit?: number;
-  page: number;
+  page?: number;
 }) {
+  // ✅ Select shippingAddress as a raw JSON field
   const data = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -209,43 +221,36 @@ export async function getAllOrders({
       createdAt: true,
       totalPrice: true,
       isDelivered: true,
-      shippingAddress: true, // ✅ we extract name/phone from here
+      orderItems: true,
+      shippingAddress: true, // Prisma JSON column, not a relation
     },
   });
-  type ShippingAddressMini = {
-    fullName?: string;
-    phoneNumber?: string;
-  };
 
-  const mapped = data.map((o) => {
-    const address = (o.shippingAddress ?? {}) as ShippingAddressMini;
+  // ✅ Map and parse shippingAddress safely
+  return data.map((order) => {
+    const address = order.shippingAddress as ShippingAddress | null;
 
     return {
-      ...o,
-      customerName: address.fullName ?? "Unknown",
-      customerPhone: address.phoneNumber ?? "N/A",
+      ...order,
+      customerName: address?.fullName ?? "Unknown",
+      customerPhone: address?.phoneNumber ?? "N/A",
     };
   });
-
-  return mapped.map((o) => convertCartToPlainObject(o));
 }
 
-//delete order
+// ---------- DELETE ORDER ----------
 export async function deleteOrder(orderId: string) {
   try {
     await prisma.order.delete({ where: { id: orderId } });
     revalidatePath("/admin/orders");
     return { success: true, message: "Order deleted successfully" };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting order:", error);
-    return {
-      success: false,
-      message: error?.message || "Failed to delete order",
-    };
+    return { success: false, message: formatError(error) };
   }
 }
 
-//order update to Delivered
+// ---------- UPDATE ORDER TO DELIVERED ----------
 export async function updateOrderToDelivered(orderId: string) {
   try {
     await prisma.order.update({
@@ -254,11 +259,8 @@ export async function updateOrderToDelivered(orderId: string) {
     });
     revalidatePath("/admin/orders");
     return { success: true, message: "Order updated successfully" };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating order:", error);
-    return {
-      success: false,
-      message: error?.message || "Failed to update order",
-    };
+    return { success: false, message: formatError(error) };
   }
 }

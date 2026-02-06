@@ -12,7 +12,7 @@ import Image from "next/image";
 import ConfirmOrderForm from "./confirmed-order-form";
 import { Cart } from "@/types";
 import { shippingAddressSchema } from "@/lib/validators";
-
+import { CartItem } from "@/types";
 // ✅ ADD: compute shipping server-side for display
 import { getShippingPriceByWilaya } from "@/lib/shippingRates";
 
@@ -53,12 +53,11 @@ const ConfirmedPage = async () => {
     validatedAddress.deliveryType,
   );
 
-  const itemsCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const computedTotal =
-    Number(cart.itemsPrice) +
-    Number(computedShippingPrice) +
-    Number((cart as any).taxPrice ?? 0);
+  const itemsCount = (cart.items as CartItem[]).reduce(
+    (sum: number, item: CartItem) => sum + item.qty,
+    0,
+  );
+  const computedTotal = Number(cart.itemsPrice) + Number(computedShippingPrice);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
@@ -151,7 +150,7 @@ const ConfirmedPage = async () => {
 
             <CardContent className="p-0">
               <div className="divide-y">
-                {cart.items.map((item) => (
+                {(cart.items as CartItem[]).map((item) => (
                   <div
                     key={`${item.productId}-${item.taille ?? "default"}`}
                     className="flex items-center gap-4 p-4 md:p-5"
@@ -185,7 +184,7 @@ const ConfirmedPage = async () => {
                           <span>
                             Qty{" "}
                             <span className="font-medium text-foreground">
-                              {item.quantity}
+                              {item.qty}
                             </span>
                           </span>
                         </div>
@@ -195,10 +194,7 @@ const ConfirmedPage = async () => {
                     {/* Price */}
                     <div className="text-right">
                       <p className="font-semibold">
-                        DZD{" "}
-                        {(Number(item.price) * Number(item.quantity)).toFixed(
-                          2,
-                        )}
+                        DZD {(Number(item.price) * Number(item.qty)).toFixed(2)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         DZD {Number(item.price).toFixed(2)} each

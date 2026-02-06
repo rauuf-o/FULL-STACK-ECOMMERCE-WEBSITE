@@ -107,7 +107,7 @@ const AddCart = ({ cart, item }: { cart?: Cart; item: CartItem }) => {
             </Button>
 
             <div className="min-w-10 text-center text-sm font-semibold">
-              {existItem.quantity}
+              {existItem.qty}
             </div>
 
             <Button

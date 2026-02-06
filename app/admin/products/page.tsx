@@ -4,6 +4,7 @@ import Image from "next/image";
 import DeleteDialog from "@/components/ui/shared/delete-dialog";
 
 import { getAllProducts, deleteProduct } from "@/actions/products.action";
+import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -64,14 +65,14 @@ const AdminProductsPage = async (props: {
           <TableBody>
             {products.data.length ? (
               products.data.map((product) => {
-                const stock = Number(
-                  (product as any).stock ?? (product as any).countInStock ?? 0,
-                );
+                type ProductLike = Partial<
+                  Product & { image?: string; countInStock?: number }
+                >;
+                const p = product as unknown as ProductLike;
 
-                const img =
-                  (product as any).image ||
-                  (product as any).images?.[0] ||
-                  null;
+                const stock = Number(p.stock ?? p.countInStock ?? 0);
+
+                const img = p.image || p.images?.[0] || null;
 
                 return (
                   <TableRow key={product.id} className="hover:bg-muted/30">
@@ -108,20 +109,18 @@ const AdminProductsPage = async (props: {
                           {product.name}
                         </p>
                         <p className="text-xs text-muted-foreground line-clamp-1">
-                          {(product as any).slug
-                            ? `/${(product as any).slug}`
-                            : ""}
+                          {p.slug ? `/${p.slug}` : ""}
                         </p>
                       </div>
                     </TableCell>
 
                     {/* Price */}
                     <TableCell className="text-right font-semibold">
-                      {Number((product as any).price ?? 0).toLocaleString()} DA
+                      {Number(p.price ?? 0).toLocaleString()} DA
                     </TableCell>
 
                     {/* Category */}
-                    <TableCell>{(product as any).category ?? "—"}</TableCell>
+                    <TableCell>{p.category ?? "—"}</TableCell>
 
                     {/* Stock */}
                     <TableCell className="text-center font-medium">

@@ -32,22 +32,12 @@ export default async function ShopPage({
   const page = Math.max(1, Number(sp.page || "1") || 1);
   const category = (sp.category || "").trim() || undefined;
 
-  // ✅ categories (distinct)
-  const rawCats = await prisma.product.findMany({
-    select: { category: true },
-    distinct: ["category"],
-    orderBy: { category: "asc" },
-  });
-
-  const categoryNames = rawCats
-    .map((c) => (c.category ?? "").trim())
-    .filter((v) => v.length > 0);
-
-  // ✅ counts per category (no groupBy)
+  // ✅ Get ALL products with categories
   const allCatsForCount = await prisma.product.findMany({
     select: { category: true },
   });
 
+  // ✅ Build counts map with TRIMMED categories
   const countsMap = new Map<string, number>();
   for (const row of allCatsForCount) {
     const name = (row.category ?? "").trim();
@@ -55,16 +45,23 @@ export default async function ShopPage({
     countsMap.set(name, (countsMap.get(name) || 0) + 1);
   }
 
+  // ✅ Get unique category names (sorted)
+  const categoryNames = Array.from(countsMap.keys()).sort();
+
+  // ✅ Build final categories array
   const categories = categoryNames.map((name) => ({
     name,
     count: countsMap.get(name) || 0,
   }));
 
-  // ✅ products (no search bar, so query is omitted)
+  // ✅ Calculate TOTAL products count (for "All" button)
+  const totalProductsCount = allCatsForCount.length;
+
+  // ✅ products (filtered by category if selected)
   const {
     data: products,
     totalPages,
-    dataCount,
+    dataCount, // This is the filtered count (current category or all)
   } = await getAllProducts({
     page,
     limit: PAGE_SIZE,
@@ -102,7 +99,7 @@ export default async function ShopPage({
           ) : null}
         </header>
 
-        {/* Mobile categories: dropdown (already good) */}
+        {/* Mobile categories: dropdown */}
         <div className="mt-6 lg:hidden">
           <form action="/shop" method="GET" className="grid gap-2">
             <input type="hidden" name="page" value="1" />
@@ -133,7 +130,7 @@ export default async function ShopPage({
           </form>
         </div>
 
-        {/* Desktop categories: make it look GOOD (not like mobile) */}
+        {/* Desktop categories */}
         <div className="mt-10 hidden lg:block">
           <div className="rounded-3xl border border-[#393628] bg-[#27251b]/55 p-5 shadow-[0_14px_40px_rgba(0,0,0,0.25)]">
             <div className="flex items-end justify-between">
@@ -158,9 +155,9 @@ export default async function ShopPage({
 
             <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-[#393628] to-transparent" />
 
-            {/* Desktop: pill grid instead of sidebar list */}
+            {/* Desktop: pill grid */}
             <div className="mt-4 grid grid-cols-4 gap-3 xl:grid-cols-6">
-              {/* All */}
+              {/* All - ✅ Use totalProductsCount instead of dataCount */}
               <Link
                 href={`/shop${buildUrl({ page: "1" })}`}
                 className={cn(
@@ -180,7 +177,7 @@ export default async function ShopPage({
                         : "bg-[#393628] text-white/80",
                     )}
                   >
-                    {dataCount}
+                    {totalProductsCount}
                   </span>
                 </div>
               </Link>

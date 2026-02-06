@@ -5,11 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ProductImages from "@/components/ui/shared/products/product-images";
 import AddCart from "@/components/ui/shared/products/add-cart";
-import { Cart } from "@/types";
+import { Cart, Product } from "@/types";
 import { cn } from "@/lib/utils";
 
 type ProductDetailsClientProps = {
-  product: any;
+  product: Product;
   cart?: Cart;
 };
 
@@ -136,7 +136,7 @@ const ProductDetailsClient = ({ product, cart }: ProductDetailsClientProps) => {
                       name: product.name,
                       slug: product.slug,
                       price: product.price,
-                      quantity: 1,
+                      qty: 1,
                       image: product.images[0],
                       ...(selectedSize && { taille: selectedSize }),
                     }}
@@ -163,7 +163,7 @@ const ProductDetailsClient = ({ product, cart }: ProductDetailsClientProps) => {
                 name: product.name,
                 slug: product.slug,
                 price: product.price,
-                quantity: 1,
+                qty: 1,
                 image: product.images[0],
                 ...(selectedSize && { taille: selectedSize }),
               }}

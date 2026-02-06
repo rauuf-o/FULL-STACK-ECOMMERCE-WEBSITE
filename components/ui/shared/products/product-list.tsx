@@ -21,7 +21,7 @@ const ProductsList = ({
 
       {/* ✅ NEW: Categories section using same products data */}
       <CategoriesSection products={data} />
-      <LatestProducts limit={6} />
+      <LatestProducts limit={7} />
 
       <TrustSection />
     </div>

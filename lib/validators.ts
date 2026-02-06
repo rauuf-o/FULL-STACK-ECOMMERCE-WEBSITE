@@ -44,31 +44,6 @@ export const signUpSchema = z
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });
-//cart schema
-export const cartItemSchema = z.object({
-  productId: z.string().min(1, "Product ID is required"),
-  name: z.string().min(1, "Product name is required"),
-  quantity: z.coerce
-    .number()
-    .int()
-    .nonnegative("Quantity must be a non-negative integer"),
-  slug: z.string().min(1, "Slug is required"),
-  image: z.string().min(1, "Image is required"),
-  price: z.coerce.number().min(0, "Price must be a non-negative number"),
-  taille: z.string().optional(), // ✅ Add this line
-});
-
-export const cartSchema = z.object({
-  items: z.array(cartItemSchema),
-  itemsPrice: z.coerce.number().min(0, "Items price must be non-negative"),
-  totalPrice: z.coerce.number().min(0, "Total price must be non-negative"),
-  shippingPrice: z.coerce
-    .number()
-    .min(0, "Shipping price must be non-negative"),
-  sessionCartId: z.string().min(1, "Session Cart ID is required"),
-  userId: z.string().optional().nullable(),
-});
-
 export const shippingAddressSchema = z.discriminatedUnion("deliveryType", [
   z.object({
     deliveryType: z.literal("STOP_DESK"),
@@ -91,6 +66,34 @@ export const shippingAddressSchema = z.discriminatedUnion("deliveryType", [
     address: z.string().min(5, "Address must be at least 5 characters long"),
   }),
 ]);
+//cart schema
+export const cartItemSchema = z.object({
+  productId: z.string().min(1, "Product ID is required"),
+  name: z.string().min(1, "Product name is required"),
+  qty: z.coerce
+    .number()
+    .int()
+    .nonnegative("Quantity must be a non-negative integer"),
+  slug: z.string().min(1, "Slug is required"),
+  image: z.string().min(1, "Image is required"),
+  price: z.coerce.number().min(0, "Price must be a non-negative number"),
+  taille: z.string().optional(), // ✅ Add this line
+});
+
+export const cartSchema = z.object({
+  items: z.array(cartItemSchema),
+  itemsPrice: z.coerce.number().min(0, "Items price must be non-negative"),
+  totalPrice: z.coerce.number().min(0, "Total price must be non-negative"),
+  shippingPrice: z.coerce
+    .number()
+    .min(0, "Shipping price must be non-negative"),
+  sessionCartId: z.string().min(1, "Session Cart ID is required"),
+  userId: z.string().optional().nullable(),
+
+  // ✅ Add optional shipping address
+  shippingAddress: shippingAddressSchema.optional(),
+});
+
 //schema for inserting orders
 export const insertOrderSchema = z.object({
   userId: z.string().nullable(),
@@ -98,6 +101,10 @@ export const insertOrderSchema = z.object({
   itemsPrice: z.number(),
   shippingPrice: z.number(),
   totalPrice: z.number(),
+
+  // ✅ add these
+  isDelivered: z.boolean().default(false),
+  deliveredAt: z.date().nullable().optional(),
 });
 
 // ✅ Add taille field

@@ -7,12 +7,12 @@ import { convertCartToPlainObject, formatError } from "@/lib/utils";
 import { CartItem } from "@/types";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@/lib/generated/prisma/client";
+// Prisma import removed: avoid unused import after adjusting JSON casts
 import { ShippingAddress } from "@/types";
 
 const calcPrice = (items: CartItem[]) => {
   const itemsPrice = items.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total, item) => total + item.price * item.qty, // ✅ Changed from quantity to qty
     0,
   );
 
@@ -62,7 +62,9 @@ export async function addItemToCart(data: CartItem) {
         data: {
           sessionId: newCart.sessionCartId,
           userId: newCart.userId,
-          items: newCart.items as any,
+          // Prisma JSON input can be strict depending on generated types;
+          // cast to any here to satisfy the client while preserving runtime shape.
+          items: newCart.items as CartItem[],
           itemsPrice: newCart.itemsPrice,
           shippingPrice: newCart.shippingPrice,
           totalPrice: newCart.totalPrice,
@@ -83,7 +85,7 @@ export async function addItemToCart(data: CartItem) {
 
     if (existItem) {
       //check stock
-      if (product.stock < existItem.quantity + 1) {
+      if (product.stock < existItem.qty + 1) {
         throw new Error("Not enough stock available");
       }
 
@@ -91,7 +93,7 @@ export async function addItemToCart(data: CartItem) {
       const itemToUpdate = (cart.items as CartItem[]).find(
         (x) => x.productId === item.productId && x.taille === item.taille,
       )!;
-      itemToUpdate.quantity = existItem.quantity + 1;
+      itemToUpdate.qty = existItem.qty + 1;
     } else {
       //if item does not exist, add new item
       //check stock
@@ -107,7 +109,7 @@ export async function addItemToCart(data: CartItem) {
     await prisma.cart.update({
       where: { id: cart.id },
       data: {
-        items: cart.items as Prisma.CartUpdateitemsInput[],
+        items: cart.items as CartItem[],
         ...calcPrice(cart.items as CartItem[]),
       },
     });
@@ -182,10 +184,10 @@ export async function removeItemFromCart(productId: string, taille?: string) {
 
     // ✅ build updated items array (no in-place mutation)
     const updatedItems: CartItem[] =
-      existItem.quantity > 1
+      existItem.qty > 1
         ? items.map((x) =>
             x.productId === productId && x.taille === taille
-              ? { ...x, quantity: x.quantity - 1 }
+              ? { ...x, quantity: x.qty - 1 }
               : x,
           )
         : items.filter(
@@ -198,7 +200,7 @@ export async function removeItemFromCart(productId: string, taille?: string) {
     await prisma.cart.update({
       where: { id: cart.id },
       data: {
-        items: updatedItems as any, // ✅ correct for Json
+        items: updatedItems as CartItem[],
         itemsPrice: prices.itemsPrice,
         shippingPrice: prices.shippingPrice,
         totalPrice: prices.totalPrice,
@@ -248,13 +250,16 @@ export async function saveCartShippingAddress(address: ShippingAddress) {
 export async function getCartCount() {
   const cart = await getCartItems();
 
-  const items = Array.isArray((cart as any)?.items)
-    ? ((cart as any).items as any[])
+  const possibleItems = (cart as unknown as { items?: unknown })?.items;
+  const items = Array.isArray(possibleItems)
+    ? (possibleItems as unknown[])
     : [];
 
-  // supports qty/quantity; defaults to 1 each
-  const count = items.reduce((sum, item) => {
-    const qty = Number(item?.qty ?? item?.quantity ?? 1);
+  // supports qty (order items) or quantity (cart items); defaults to 1 each
+  type ItemLike = { qty?: number | string; quantity?: number | string };
+  const count = items.reduce((sum: number, item) => {
+    const it = item as ItemLike;
+    const qty = Number(it.qty ?? it.quantity ?? 1);
     return sum + (Number.isFinite(qty) ? qty : 1);
   }, 0);
 

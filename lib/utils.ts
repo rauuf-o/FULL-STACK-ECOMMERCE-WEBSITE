@@ -1,4 +1,4 @@
-import { CartItem } from "@/types";
+import { CartItem, Cart } from "@/types";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ZodError } from "zod";

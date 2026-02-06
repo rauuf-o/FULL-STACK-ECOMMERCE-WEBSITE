@@ -1,151 +1,155 @@
 "use server";
-import { productInsertSchema, updateProductSchema } from "@/lib/validators";
-import { prisma } from "../db/prisma";
-import { convertCartToPlainObject, prismaToJson } from "../lib/utils";
-import { LATEST_PRODUCTS_LIMIT, PAGE_SIZE } from "../lib/constants";
+
+import { prisma } from "@/db/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import {
+  convertCartToPlainObject,
+  prismaToJson,
+  formatError,
+} from "@/lib/utils";
+import { LATEST_PRODUCTS_LIMIT, PAGE_SIZE } from "@/lib/constants";
+import { productInsertSchema, updateProductSchema } from "@/lib/validators";
+import type { Product } from "@/types";
 
+// ----------------------------
 // Get latest products
-export async function getLatestProducts() {
+// ----------------------------
+export async function getLatestProducts(): Promise<Product[]> {
   const data = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
   });
-  return prismaToJson(data);
+
+  return prismaToJson(data) as Product[];
 }
 
+// ----------------------------
 // Get product by slug
-export async function getProductBySlug(slug: string) {
+// ----------------------------
+export async function getProductBySlug(slug: string): Promise<Product | null> {
   const product = await prisma.product.findFirst({
     where: { slug },
   });
-  return prismaToJson(product);
+  return prismaToJson(product) as Product | null;
 }
 
-// Get all products
+// ----------------------------
+// Get all products with pagination & optional category/search
+// ----------------------------
 export async function getAllProducts({
   query,
   limit = PAGE_SIZE,
-  page,
+  page = 1,
   category,
 }: {
   query?: string;
   limit?: number;
-  page: number;
+  page?: number;
   category?: string;
 }) {
+  // Build the where filter
+  const where = category ? { category } : undefined;
+
+  // Fetch products from Prisma
   const data = await prisma.product.findMany({
-    where: category ? { category } : undefined,
+    where,
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * limit,
     take: limit,
   });
-  const dataCount = await prisma.product.count({
-    where: category ? { category } : undefined,
-  });
+
+  // Count total products for pagination
+  const dataCount = await prisma.product.count({ where });
+
+  // Convert to plain JS + type-safe Product[]
+  const products: Product[] = prismaToJson(data) as Product[];
 
   return {
-    data,
+    data: products,
     totalPages: Math.ceil(dataCount / limit),
     dataCount,
   };
 }
 
+// ----------------------------
 // Get product by ID
-export async function getProductById(id: string) {
+// ----------------------------
+export async function getProductById(id: string): Promise<Product | null> {
   const data = await prisma.product.findUnique({ where: { id } });
-  return convertCartToPlainObject(data);
+
+  // ✅ Cast via unknown to satisfy TypeScript
+  return data ? (convertCartToPlainObject(data) as unknown as Product) : null;
 }
 
+// ----------------------------
 // Delete Product
+// ----------------------------
 export async function deleteProduct(productId: string) {
   try {
     await prisma.product.delete({ where: { id: productId } });
     revalidatePath("/admin/products");
     return { success: true, message: "Product deleted successfully" };
-  } catch (error: any) {
-    console.error("Error deleting product:", error);
-    return {
-      success: false,
-      message: error?.message || "Failed to delete product",
-    };
+  } catch (error: unknown) {
+    return { success: false, message: formatError(error) };
   }
 }
 
+// ----------------------------
 // Create Product
+// ----------------------------
 export async function createProduct(data: z.infer<typeof productInsertSchema>) {
   try {
-    const product = productInsertSchema.parse(data);
-    await prisma.product.create({ data: product });
+    const validated = productInsertSchema.parse(data);
+    await prisma.product.create({ data: validated });
     revalidatePath("/admin/products");
     return { success: true, message: "Product created successfully" };
-  } catch (error: any) {
-    console.error("Error creating product:", error);
-    return {
-      success: false,
-      message: error?.message || "Failed to create product",
-    };
+  } catch (error: unknown) {
+    return { success: false, message: formatError(error) };
   }
 }
 
+// ----------------------------
 // Update Product
+// ----------------------------
 export async function updateProduct(data: z.infer<typeof updateProductSchema>) {
   try {
-    const product = updateProductSchema.parse(data);
+    const validated = updateProductSchema.parse(data);
 
-    const productExist = await prisma.product.findUnique({
-      where: { id: product.id },
+    const exists = await prisma.product.findUnique({
+      where: { id: validated.id },
     });
-    if (!productExist) {
-      throw new Error("Product not found");
-    }
+    if (!exists) throw new Error("Product not found");
 
     await prisma.product.update({
-      where: { id: product.id },
-      data: product,
+      where: { id: validated.id },
+      data: validated,
     });
 
     revalidatePath("/admin/products");
-    return { success: true, message: "Product Has Been Updated" };
-  } catch (error: any) {
-    console.error("Error updating product:", error);
-    return {
-      success: false,
-      message: error?.message || "Failed to update product",
-    };
+    return { success: true, message: "Product updated successfully" };
+  } catch (error: unknown) {
+    return { success: false, message: formatError(error) };
   }
 }
-export async function getProductsByCategory(categorySlug: string) {
-  try {
-    console.log("Fetching products for category:", categorySlug);
 
-    // ✅ Convert slug back to category name
-    // "mens-dress-shirts" → "Men Dress"
-    const categoryName = categorySlug
-      .split("-")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+// ----------------------------
+// Get products by category
+// ----------------------------
+export async function getProductsByCategory(
+  categorySlug: string,
+): Promise<Product[]> {
+  const categoryName = categorySlug
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
-    console.log("Converted to category name:", categoryName);
+  const products = await prisma.product.findMany({
+    where: {
+      category: { contains: categoryName, mode: "insensitive" },
+      stock: { gt: 0 },
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
-    const products = await prisma.product.findMany({
-      where: {
-        category: {
-          contains: categoryName, // ✅ Use contains for partial match
-          mode: "insensitive", // ✅ Case-insensitive search
-        },
-        stock: { gt: 0 },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    console.log(
-      `Found ${products.length} products for category ${categoryName}`,
-    );
-
-    return products.map((p) => convertCartToPlainObject(p));
-  } catch (err) {
-    console.error("Error fetching products by category:", err);
-    return [];
-  }
+  return products.map((p) => convertCartToPlainObject(p) as unknown as Product);
 }

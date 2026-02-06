@@ -12,7 +12,7 @@ type LatestProductsSectionProps = {
 };
 
 export default function LatestProductsSection({
-  limit = 4,
+  limit = 7,
 }: LatestProductsSectionProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,11 +21,14 @@ export default function LatestProductsSection({
     const fetchProducts = async () => {
       try {
         const data = await getLatestProducts();
-        const typedProducts: Product[] = data.map((p: any) => ({
-          ...p,
-          createdAt: new Date(p.createdAt),
-          rating: p.rating || "0",
-        }));
+        const typedProducts: Product[] = (data as unknown[]).map((p) => {
+          const prod = p as unknown as Product & { createdAt: string | Date };
+          return {
+            ...prod,
+            createdAt: new Date(prod.createdAt as string),
+            rating: prod.rating || "0",
+          };
+        });
         setProducts(typedProducts.slice(0, limit));
       } catch (error) {
         console.error("Error fetching latest products:", error);
@@ -44,10 +47,6 @@ export default function LatestProductsSection({
   if (!products.length)
     return <p className="text-center py-10 text-white">No products found.</p>;
 
-  // Featured = first product
-  const featured = products[0];
-  const rest = products.slice(1);
-
   return (
     <>
       {/* Header */}
@@ -65,35 +64,33 @@ export default function LatestProductsSection({
         </div>
       </section>
 
-      {/* Remaining Products */}
-      {rest.length > 0 && (
-        <section className="px-4 wrapper pb-8">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {rest.map((product) => (
-              <Link
-                key={product.id}
-                href={`/product/${product.slug}`}
-                className="relative h-56 rounded-xl overflow-hidden group block"
-              >
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.03]"
-                  style={{
-                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.85) 100%), url("${product.images?.[0] || "/placeholder.png"}")`,
-                  }}
-                />
-                <div className="absolute bottom-0 left-0 p-4">
-                  <h3 className="text-white text-lg font-black uppercase">
-                    {product.name}
-                  </h3>
-                  <p className="text-primary font-bold text-xs uppercase tracking-widest mt-1">
-                    {product.category}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* All Products */}
+      <section className="px-4 wrapper pb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {products.map((product) => (
+            <Link
+              key={product.id}
+              href={`/product/${product.slug}`}
+              className="relative h-56 rounded-xl overflow-hidden group block"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-[1.03]"
+                style={{
+                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.85) 100%), url("${product.images?.[0] || "/placeholder.png"}")`,
+                }}
+              />
+              <div className="absolute bottom-0 left-0 p-4">
+                <h3 className="text-white text-lg font-black uppercase">
+                  {product.name}
+                </h3>
+                <p className="text-primary font-bold text-xs uppercase tracking-widest mt-1">
+                  {product.category}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* Button to see all products */}
       <div className="flex justify-center mb-10 pb-12">

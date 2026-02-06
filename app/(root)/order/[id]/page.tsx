@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { auth } from "@/auth";
 import MarkDeliveredButton from "@/components/ui/mark-delivered-button"; // ✅ ADD
+import type { ShippingAddress, OrderItem } from "@/types";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -40,8 +41,8 @@ export default async function OrderDetailsPage({ params }: PageProps) {
   const order = await getOrderById(id);
   if (!order) notFound();
 
-  const ship = (order.shippingAddress ?? {}) as any;
-  const items = (order.orderItems ?? []) as any[];
+  const ship = (order.shippingAddress ?? {}) as unknown as ShippingAddress;
+  const items = (order.orderItems ?? []) as unknown as OrderItem[];
 
   const itemsCount = items.reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
 
@@ -247,7 +248,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                   <MarkDeliveredButton
                     id={order.id}
                     action={updateOrderToDelivered}
-                    disabled={order.isDelivered === true}
+                    disabled={order.isDelivered}
                   />
                 ) : null}
               </div>

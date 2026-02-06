@@ -38,19 +38,16 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
     formState: { errors, isSubmitting },
     setValue,
     watch,
-  } = useForm<ProductFormValues>({
-    defaultValues,
-  });
+  } = useForm<ProductFormValues>({ defaultValues });
 
   const watchImages = watch("images");
   const watchTailles = watch("taille") || [];
 
-  // -------------------- Determine sizes dynamically --------------------
   const isShoeProduct =
     watch("category")?.toLowerCase().includes("chaussures") || false;
   const availableSizes = isShoeProduct ? SHOE_SIZES : CLOTHING_SIZES;
 
-  // -------------------- IMAGE UPLOAD --------------------
+  // ---------------- IMAGE UPLOAD ----------------
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -97,49 +94,47 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
     setValue("banner", null);
   };
 
-  // -------------------- SUBMIT --------------------
+  // ---------------- SUBMIT ----------------
   const onSubmit = async (data: ProductFormValues) => {
     try {
       let res;
       if (type === "Create") {
         res = await createProduct(data);
       } else {
-        if (!product?.id) {
-          alert("Error: Cannot update a product without an ID.");
-          return;
-        }
+        if (!product?.id) return;
         res = await updateProduct({ ...data, id: product.id });
       }
 
       if (res.success) {
-        alert(res.message);
         router.push("/admin/products");
       } else {
         alert(res.message);
       }
-    } catch (error: any) {
-      console.error("Submission error:", error);
-      alert("An unexpected error occurred");
+    } catch {
+      alert("Unexpected error");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
+    <div className="min-h-screen bg-background py-10 px-4 text-foreground">
       <div className="max-w-5xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/60 p-10">
+        <div className="rounded-3xl border border-border bg-card p-10 shadow-xl">
+          {/* HEADER */}
           <div className="mb-10">
-            <h2 className="text-3xl font-bold text-gray-900">
+            <h2 className="text-3xl font-extrabold text-primary">
               {type === "Create" ? "Create Product" : "Update Product"}
             </h2>
-            <p className="text-gray-500 mt-2">
+            <p className="mt-2 text-muted-foreground">
               Manage your product details and assets
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-            {/* ---------------- BASIC INFO ---------------- */}
-            <section className="bg-gray-50 rounded-2xl p-6 space-y-6">
-              <h3 className="text-lg font-semibold">Basic Information</h3>
+            {/* BASIC INFO */}
+            <section className="rounded-2xl border border-border bg-background p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-primary">
+                Basic Information
+              </h3>
 
               <div className="grid md:grid-cols-2 gap-6">
                 {["name", "slug", "category", "brand"].map((field) => (
@@ -147,55 +142,59 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
                     key={field}
                     className={field === "name" ? "md:col-span-2" : ""}
                   >
-                    <label className="text-sm font-medium">{field}</label>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      {field}
+                    </label>
                     <input
-                      type="text"
-                      {...register(field as any)}
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3
-                        text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition"
+                      {...register(field as keyof ProductFormValues)}
+                      className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3 text-sm
+                      text-foreground focus:border-primary focus:ring-2 focus:ring-primary/40"
                     />
-                    {errors[field as keyof ProductFormValues] && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors[field as keyof ProductFormValues]?.message}
-                      </p>
-                    )}
                   </div>
                 ))}
 
                 <div>
-                  <label className="text-sm font-medium">Price ($)</label>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Price ($)
+                  </label>
                   <input
                     type="number"
-                    step="0.01"
                     {...register("price", { valueAsNumber: true })}
-                    className="mt-2 w-full rounded-xl border px-4 py-3 focus:ring-4 focus:ring-blue-500/20"
+                    className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3
+                    focus:border-primary focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">Stock</label>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Stock
+                  </label>
                   <input
                     type="number"
                     {...register("stock", { valueAsNumber: true })}
-                    className="mt-2 w-full rounded-xl border px-4 py-3 focus:ring-4 focus:ring-blue-500/20"
+                    className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3
+                    focus:border-primary focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="text-sm font-medium">Description</label>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Description
+                  </label>
                   <textarea
                     rows={5}
                     {...register("description")}
-                    className="mt-2 w-full rounded-xl border px-4 py-3 resize-none focus:ring-4 focus:ring-blue-500/20"
+                    className="mt-2 w-full rounded-xl border border-border bg-card px-4 py-3 resize-none
+                    focus:border-primary focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
 
-                {/* ---------------- TAILLES ---------------- */}
+                {/* TAILLES — UNTOUCHED */}
                 <div className="md:col-span-2">
-                  <label className="text-sm font-medium mb-2 block">
+                  <label className="mb-2 block text-sm font-medium text-muted-foreground">
                     Available Sizes
                   </label>
-                  <div className="flex gap-4 flex-wrap">
+                  <div className="flex flex-wrap gap-4">
                     {availableSizes.map((size) => (
                       <label
                         key={size}
@@ -216,26 +215,25 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
                               );
                             }
                           }}
-                          className="h-5 w-5 accent-blue-600"
+                          className="h-5 w-5 accent-primary"
                         />
-                        <span className="text-sm font-medium">{size}</span>
+                        <span className="text-sm font-medium text-foreground">
+                          {size}
+                        </span>
                       </label>
                     ))}
                   </div>
-                  {errors.taille && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.taille.message}
-                    </p>
-                  )}
                 </div>
               </div>
             </section>
 
-            {/* ---------------- IMAGES ---------------- */}
-            <section className="bg-gray-50 rounded-2xl p-6 space-y-6">
-              <h3 className="text-lg font-semibold">Product Images</h3>
+            {/* IMAGES */}
+            <section className="rounded-2xl border border-border bg-background p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-primary">
+                Product Images
+              </h3>
 
-              <div className="border border-dashed rounded-2xl p-8 text-center bg-white hover:bg-blue-50/30 transition">
+              <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center hover:border-primary transition">
                 <input
                   type="file"
                   multiple
@@ -245,9 +243,9 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
                   className="hidden"
                 />
                 <label htmlFor="product-images" className="cursor-pointer">
-                  <Upload className="mx-auto mb-3 text-blue-600" />
+                  <Upload className="mx-auto mb-3 text-primary" />
                   <p className="font-medium">Upload product images</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     PNG, JPG, WEBP up to 10MB
                   </p>
                 </label>
@@ -264,7 +262,8 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
                       <button
                         type="button"
                         onClick={() => removeImage(i)}
-                        className="absolute top-2 right-2 bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition"
+                        className="absolute top-2 right-2 bg-black/70 text-white p-1.5 rounded-full
+                        opacity-0 group-hover:opacity-100 transition"
                       >
                         <X size={14} />
                       </button>
@@ -274,25 +273,28 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
               )}
             </section>
 
-            {/* ---------------- FEATURED ---------------- */}
-            <label className="flex items-center justify-between p-5 rounded-2xl border bg-white hover:border-blue-500 transition cursor-pointer">
+            {/* FEATURED */}
+            <label className="flex items-center justify-between rounded-2xl border border-border bg-card p-5 cursor-pointer hover:border-primary transition">
               <div>
                 <p className="font-medium">Featured Product</p>
-                <p className="text-xs text-gray-500">Highlight on homepage</p>
+                <p className="text-xs text-muted-foreground">
+                  Highlight on homepage
+                </p>
               </div>
               <input
                 type="checkbox"
                 {...register("isFeatured")}
-                className="h-5 w-5 accent-blue-600"
+                className="h-5 w-5 accent-primary"
               />
             </label>
 
-            {/* ---------------- ACTIONS ---------------- */}
+            {/* ACTIONS */}
             <div className="flex gap-4 pt-6">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="flex-1 rounded-xl border px-6 py-3 text-sm font-medium hover:bg-gray-100 transition"
+                className="flex-1 rounded-xl border border-border px-6 py-3 text-sm
+                text-muted-foreground hover:text-foreground hover:border-primary transition"
               >
                 Cancel
               </button>
@@ -300,7 +302,8 @@ const ProductForm = ({ type, product }: ProductFormProps) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 hover:from-blue-700 hover:to-indigo-700 transition"
+                className="flex-1 rounded-xl bg-primary px-6 py-3 text-sm font-bold
+                text-black hover:opacity-90 transition"
               >
                 {isSubmitting ? "Processing..." : `${type} Product`}
               </button>

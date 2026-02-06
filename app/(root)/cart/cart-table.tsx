@@ -26,7 +26,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
   }
 
   const subtotal = cart.items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
+    (acc, item) => acc + item.price * item.qty,
     0,
   );
 
@@ -116,7 +116,7 @@ const CartTable = ({ cart }: { cart?: Cart }) => {
                     </button>
 
                     <span className="w-6 text-center font-bold">
-                      {item.quantity}
+                      {item.qty}
                     </span>
 
                     {/* INCREASE - ✅ Already correct, passes full item */}

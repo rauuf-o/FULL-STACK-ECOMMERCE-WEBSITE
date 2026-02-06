@@ -8,8 +8,6 @@ import { getOrderSummary } from "@/actions/order-action";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import SalesChart from "../sales-chart";
-
 export const metadata: Metadata = {
   title: "Admin Dashboard",
 };
@@ -39,18 +37,36 @@ const AdminOverviewPage = async () => {
   const summary = await getOrderSummary();
 
   const totalSalesValue =
-    Number((summary.totalSales as any)?._sum?.totalPrice ?? 0) || 0;
+    Number(
+      (
+        summary.totalSales as unknown as {
+          _sum?: { totalPrice?: number | string };
+        }
+      )?._sum?.totalPrice ?? 0,
+    ) || 0;
 
   // ✅ Make latestOrders safe + consistent (avoid Decimal/Date weirdness)
-  const latestOrders = (summary.latestSales ?? []).map((o: any) => ({
-    id: String(o.id),
-    createdAt: o.createdAt,
-    totalPrice: Number(o.totalPrice ?? 0),
-    isPaid: Boolean(o.isPaid ?? false),
-    itemsCount: Array.isArray(o.orderItems) ? o.orderItems.length : 0,
-    customerName: o.customerName ?? "Unknown",
-    customerPhone: o.customerPhone ?? "N/A",
-  }));
+  const latestOrders = (summary.latestSales ?? []).map((o) => {
+    type LatestOrderRaw = {
+      id: string;
+      createdAt: string | Date;
+      totalPrice?: number | string;
+      isPaid?: boolean;
+      orderItems?: unknown[];
+      customerName?: string;
+      customerPhone?: string;
+    };
+    const od = o as unknown as LatestOrderRaw;
+    return {
+      id: String(od.id),
+      createdAt: od.createdAt,
+      totalPrice: Number(od.totalPrice ?? 0),
+      isPaid: Boolean(od.isPaid ?? false),
+      itemsCount: Array.isArray(od.orderItems) ? od.orderItems.length : 0,
+      customerName: od.customerName ?? "Unknown",
+      customerPhone: od.customerPhone ?? "N/A",
+    };
+  });
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-muted/30">
@@ -144,7 +160,6 @@ const AdminOverviewPage = async () => {
                 Sum of totalPrice grouped by month (MM/YY)
               </p>
             </CardHeader>
-            <CardContent className="pt-2">/** Chart */</CardContent>
           </Card>
 
           {/* Latest Orders (clickable cards via Link) */}

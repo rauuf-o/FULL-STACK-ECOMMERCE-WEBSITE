@@ -82,37 +82,49 @@ const AdminOrderPage = async (props: {
           </TableHeader>
 
           <TableBody>
-            {orders.map((order: any) => (
-              <TableRow key={order.id}>
-                <TableCell className="font-mono">
-                  {String(order.id).slice(-6)}
-                </TableCell>
-                <TableCell>{order.customerName ?? "Unknown"}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {order.customerPhone ?? "N/A"}
-                </TableCell>
-                <TableCell>{formatDate(order.createdAt)}</TableCell>
-                <TableCell className="font-medium">
-                  {formatCurrency(Number(order.totalPrice ?? 0))}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={order.isDelivered ? "default" : "secondary"}>
-                    {order.isDelivered ? "Delivered" : "Pending"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="inline-flex gap-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/order/${order.id}`}>View</Link>
-                    </Button>
+            {orders.map((order) => {
+              type OrderLike = {
+                id: string;
+                customerName?: string;
+                customerPhone?: string;
+                createdAt: string | Date;
+                totalPrice?: number | string;
+                isDelivered?: boolean;
+              };
+              const o = order as unknown as OrderLike;
 
-                    {/* Delete should NOT be a Link. Keep as placeholder button for now */}
+              return (
+                <TableRow key={o.id}>
+                  <TableCell className="font-mono">
+                    {String(o.id).slice(-6)}
+                  </TableCell>
+                  <TableCell>{o.customerName ?? "Unknown"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {o.customerPhone ?? "N/A"}
+                  </TableCell>
+                  <TableCell>{formatDate(o.createdAt)}</TableCell>
+                  <TableCell className="font-medium">
+                    {formatCurrency(Number(o.totalPrice ?? 0))}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={o.isDelivered ? "default" : "secondary"}>
+                      {o.isDelivered ? "Delivered" : "Pending"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="inline-flex gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={`/order/${o.id}`}>View</Link>
+                      </Button>
 
-                    <DeleteDialog id={order.id} action={deleteOrder} />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                      {/* Delete should NOT be a Link. Keep as placeholder button for now */}
+
+                      <DeleteDialog id={o.id} action={deleteOrder} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
 
             {orders.length === 0 && (
               <TableRow>
