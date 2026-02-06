@@ -1,4 +1,6 @@
 // app/products/[slug]/page.tsx
+export const dynamic = "force-dynamic";
+
 import { getProductBySlug } from "@/actions/products.action";
 import { getCartItems } from "@/actions/cart-action";
 import { notFound } from "next/navigation";

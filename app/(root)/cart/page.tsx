@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import React from "react";
 import CartTable from "./cart-table";
 import { getCartItems } from "@/actions/cart-action";
