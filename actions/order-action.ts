@@ -7,11 +7,9 @@ import { getUserByID } from "@/actions/user.action";
 import type { ShippingAddress, CartItem, OrderItem } from "../types";
 import { insertOrderSchema } from "@/lib/validators";
 import { convertCartToPlainObject, formatError } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
 import { getShippingPriceByWilaya } from "@/lib/shippingRates";
 import type { Order } from "@/types";
 import { shippingAddressSchema } from "@/lib/validators";
-import { Or } from "@prisma/client/runtime/client";
 
 // ---------- CREATE ORDER ----------
 export async function createOrder() {
@@ -45,10 +43,8 @@ export async function createOrder() {
       };
     }
 
-    // Validate address
-    const validatedAddress = address; // optionally: shippingAddressSchema.parse(address)
+    const validatedAddress = address;
 
-    // Compute shipping price
     const shippingPrice = getShippingPriceByWilaya(
       validatedAddress.wilaya,
       validatedAddress.deliveryType,
@@ -56,7 +52,6 @@ export async function createOrder() {
 
     const totalPrice = cart.itemsPrice + shippingPrice;
 
-    // Validate order
     const validatedOrder = insertOrderSchema.parse({
       userId,
       shippingAddress: validatedAddress,
@@ -68,14 +63,12 @@ export async function createOrder() {
     });
 
     // Transaction
-    // Transaction
     const orderId = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: validatedOrder,
         select: { id: true },
       });
 
-      // ✅ match Prisma type exactly
       await tx.orderItem.createMany({
         data: (cart.items as OrderItem[]).map((item) => ({
           orderId: order.id,
@@ -85,7 +78,7 @@ export async function createOrder() {
           image: item.image,
           price: item.price,
           qty: item.qty,
-          taille: item.taille ?? null, // must be null if undefined
+          taille: item.taille ?? null,
         })),
       });
 
@@ -97,6 +90,9 @@ export async function createOrder() {
 
       return order.id;
     });
+
+    // ❌ REMOVED - Admin pages are dynamic, no cache to revalidate
+    // revalidatePath('/admin/orders');
 
     return {
       success: true,
@@ -113,7 +109,6 @@ export async function createOrder() {
 export async function getOrderById(orderId: string): Promise<Order | null> {
   if (!orderId) return null;
 
-  // Fetch order with related items and user
   const data = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
@@ -124,7 +119,6 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
 
   if (!data) return null;
 
-  // Validate and parse shipping address
   let shippingAddress: ShippingAddress | undefined = undefined;
   if (data.shippingAddress) {
     try {
@@ -134,7 +128,6 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
     }
   }
 
-  // Map order items
   const orderItems: OrderItem[] = data.orderItems.map((item) => ({
     productId: item.productId,
     slug: item.slug,
@@ -145,7 +138,6 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
     taille: item.taille ?? undefined,
   }));
 
-  // Return fully typed Order
   const order: Order = {
     id: data.id,
     createdAt: new Date(data.createdAt),
@@ -177,7 +169,6 @@ export async function getOrderSummary() {
   });
   const totalSales = totalSalesRaw._sum.totalPrice ?? 0;
 
-  // ✅ Fix: remove shippingAddress from include, just query orderItems
   const latestOrdersRaw = await prisma.order.findMany({
     take: 6,
     orderBy: { createdAt: "desc" },
@@ -186,7 +177,6 @@ export async function getOrderSummary() {
     },
   });
 
-  // ✅ Type-safe mapping
   const latestSales = latestOrdersRaw.map((order) => {
     const address = order.shippingAddress as ShippingAddress | undefined;
 
@@ -211,7 +201,6 @@ export async function getAllOrders({
   limit?: number;
   page?: number;
 }) {
-  // ✅ Select shippingAddress as a raw JSON field
   const data = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -222,11 +211,10 @@ export async function getAllOrders({
       totalPrice: true,
       isDelivered: true,
       orderItems: true,
-      shippingAddress: true, // Prisma JSON column, not a relation
+      shippingAddress: true,
     },
   });
 
-  // ✅ Map and parse shippingAddress safely
   return data.map((order) => {
     const address = order.shippingAddress as ShippingAddress | null;
 
@@ -242,7 +230,10 @@ export async function getAllOrders({
 export async function deleteOrder(orderId: string) {
   try {
     await prisma.order.delete({ where: { id: orderId } });
-    revalidatePath("/admin/orders");
+
+    // ❌ REMOVED - Admin pages are dynamic, no cache to revalidate
+    // revalidatePath('/admin/orders');
+
     return { success: true, message: "Order deleted successfully" };
   } catch (error: unknown) {
     console.error("Error deleting order:", error);
@@ -257,10 +248,34 @@ export async function updateOrderToDelivered(orderId: string) {
       where: { id: orderId },
       data: { isDelivered: true, deliveredAt: new Date() },
     });
-    revalidatePath("/admin/orders");
+
+    // ❌ REMOVED - Admin pages are dynamic, no cache to revalidate
+    // revalidatePath('/admin/orders');
+
     return { success: true, message: "Order updated successfully" };
   } catch (error: unknown) {
     console.error("Error updating order:", error);
+    return { success: false, message: formatError(error) };
+  }
+}
+
+// ---------- BATCH UPDATE ORDERS ----------
+export async function batchUpdateOrdersToDelivered(orderIds: string[]) {
+  try {
+    await prisma.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { isDelivered: true, deliveredAt: new Date() },
+    });
+
+    // ❌ REMOVED - Admin pages are dynamic, no cache to revalidate
+    // revalidatePath('/admin/orders');
+
+    return {
+      success: true,
+      message: `${orderIds.length} orders updated successfully`,
+    };
+  } catch (error: unknown) {
+    console.error("Error batch updating orders:", error);
     return { success: false, message: formatError(error) };
   }
 }

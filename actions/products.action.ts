@@ -20,7 +20,7 @@ export const getLatestProducts = cache(
   async (limit = 7): Promise<Product[]> => {
     const data = await prisma.product.findMany({
       orderBy: { createdAt: "desc" },
-      take: limit, // Only fetch what you need
+      take: limit,
       select: {
         id: true,
         name: true,
@@ -61,10 +61,8 @@ export async function getAllProducts({
   page?: number;
   category?: string;
 }) {
-  // Build the where filter
   const where = category ? { category } : undefined;
 
-  // Fetch products from Prisma
   const data = await prisma.product.findMany({
     where,
     orderBy: { createdAt: "desc" },
@@ -72,10 +70,8 @@ export async function getAllProducts({
     take: limit,
   });
 
-  // Count total products for pagination
   const dataCount = await prisma.product.count({ where });
 
-  // Convert to plain JS + type-safe Product[]
   const products: Product[] = prismaToJson(data) as Product[];
 
   return {
@@ -90,8 +86,6 @@ export async function getAllProducts({
 // ----------------------------
 export async function getProductById(id: string): Promise<Product | null> {
   const data = await prisma.product.findUnique({ where: { id } });
-
-  // ✅ Cast via unknown to satisfy TypeScript
   return data ? (convertCartToPlainObject(data) as unknown as Product) : null;
 }
 
@@ -101,7 +95,10 @@ export async function getProductById(id: string): Promise<Product | null> {
 export async function deleteProduct(productId: string) {
   try {
     await prisma.product.delete({ where: { id: productId } });
-    revalidatePath("/admin/products");
+
+    // ✅ ONLY ONE revalidatePath - revalidates entire app
+    revalidatePath("/", "layout");
+
     return { success: true, message: "Product deleted successfully" };
   } catch (error: unknown) {
     return { success: false, message: formatError(error) };
@@ -115,7 +112,10 @@ export async function createProduct(data: z.infer<typeof productInsertSchema>) {
   try {
     const validated = productInsertSchema.parse(data);
     await prisma.product.create({ data: validated });
-    revalidatePath("/admin/products");
+
+    // ✅ ONLY ONE revalidatePath - revalidates entire app
+    revalidatePath("/", "layout");
+
     return { success: true, message: "Product created successfully" };
   } catch (error: unknown) {
     return { success: false, message: formatError(error) };
@@ -139,7 +139,9 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>) {
       data: validated,
     });
 
-    revalidatePath("/admin/products");
+    // ✅ ONLY ONE revalidatePath - revalidates entire app
+    revalidatePath("/", "layout");
+
     return { success: true, message: "Product updated successfully" };
   } catch (error: unknown) {
     return { success: false, message: formatError(error) };
@@ -167,6 +169,10 @@ export async function getProductsByCategory(
 
   return products.map((p) => convertCartToPlainObject(p) as unknown as Product);
 }
+
+// ----------------------------
+// Get last product
+// ----------------------------
 export const getLastProduct = cache(async (): Promise<Product | null> => {
   const data = await prisma.product.findFirst({
     orderBy: { createdAt: "desc" },

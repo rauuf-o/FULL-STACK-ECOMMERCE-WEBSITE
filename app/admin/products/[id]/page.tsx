@@ -1,4 +1,7 @@
+export const dynamic = "force-dynamic"; // ✅ No caching
+
 import React from "react";
+
 import { Metadata } from "next";
 import { getProductById } from "@/actions/products.action";
 import { notFound } from "next/navigation";

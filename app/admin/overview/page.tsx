@@ -1,4 +1,6 @@
 // app/admin/overview/page.tsx (or wherever your AdminOverviewPage lives)
+export const dynamic = "force-dynamic"; // ✅ No caching
+
 import React from "react";
 import { Metadata } from "next";
 import Link from "next/link";

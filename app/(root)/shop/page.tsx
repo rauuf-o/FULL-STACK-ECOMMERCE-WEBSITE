@@ -1,5 +1,5 @@
 // app/(root)/shop/page.tsx
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // Time-based, no ISR writes
 
 import Link from "next/link";
 import Image from "next/image";
