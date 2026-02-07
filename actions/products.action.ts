@@ -114,7 +114,7 @@ export async function createProduct(data: z.infer<typeof productInsertSchema>) {
     await prisma.product.create({ data: validated });
 
     // ✅ ONLY ONE revalidatePath - revalidates entire app
-    revalidatePath("/", "layout");
+    // revalidatePath("/", "layout");
 
     return { success: true, message: "Product created successfully" };
   } catch (error: unknown) {
@@ -140,7 +140,7 @@ export async function updateProduct(data: z.infer<typeof updateProductSchema>) {
     });
 
     // ✅ ONLY ONE revalidatePath - revalidates entire app
-    revalidatePath("/", "layout");
+    //revalidatePath("/", "layout");
 
     return { success: true, message: "Product updated successfully" };
   } catch (error: unknown) {
